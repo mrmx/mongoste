@@ -3,11 +3,14 @@ Mongoste
 
 * What:
 
-	Mongoste (Mongo STats Engine) is the initial draft of a some-kind-general statistical/analytical engine.
+	Mongoste (Mongo STats Engine) is the initial draft of a some-kind-general 
+    statistical/analytical engine. The first engine targets the MongoDB database
+    and gives its initial code name althought the core name is Mongoose.
 
 * Who:
 
-	Developed by Manuel Polo (a.k.a mrmx), the project started in November 2010 while testing the MongoDB database.
+	Developed by Manuel Polo (a.k.a mrmx), the project started in November 2010
+    while testing the MongoDB database.
 
 * Project:
 
