@@ -4,8 +4,9 @@ Mongoste
 * What:
 
 	Mongoste (Mongo STats Engine) is the initial draft of a some-kind-general 
-    statistical/analytical engine. The first engine targets the MongoDB database
-    and gives its initial code name althought the core name is Mongoose.
+    statistical/analytical engine. 
+    The first engine targets the MongoDB database that gives its initial code
+    name althought the core name is Mongoose.
 
 * Who:
 
