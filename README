@@ -1,0 +1,23 @@
+Mongoste
+--------
+
+* What:
+
+	Mongoste (Mongo STats Engine) is the initial draft of a some-kind-general statistical/analytical engine.
+
+* Who:
+
+	Developed by Manuel Polo (a.k.a mrmx), the project started in November 2010 while testing the MongoDB database.
+
+* Project:
+
+	Mercurial repo: https://bitbucket.org/mrmx/mongoste
+	Twitter account: @mongoste 
+
+* License:
+
+	See the provided LICENSE file.
+
+* Contact:
+	
+	@mrmx @mistermx
