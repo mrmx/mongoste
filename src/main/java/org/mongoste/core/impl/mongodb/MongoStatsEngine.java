@@ -301,13 +301,40 @@ public class MongoStatsEngine implements StatsEngine {
         return result;
     }
 
-    /*
+    @Override
+    public void setTargetOwners(String clientId,String targetType,String target,List<String> owners) throws StatsEngineException {
+        log.info("setTargetOwners for client: {} target type: {} target: {} owners: {}",new Object[]{clientId,targetType,target,owners});
+        //Find targets and upsert owners field
+        BasicDBObject q = new BasicDBObject();
+        q.put(EVENT_CLIENT_ID,clientId);
+        q.put(EVENT_TARGET_TYPE,targetType);
+        q.put(EVENT_TARGET,target);
+
+        BasicDBObject doc = new BasicDBObject();
+        doc.put("$set", createSetOwnersTagsDoc(owners,null,false));
+        
+        WriteResult wsTargets = getTargetCollection().update(q,doc,true,true);
+        WriteResult wsCounters = getCounterCollection().update(q,doc,true,true);
+        //log.debug("setTargetOwners result: {}",wsTargets.getLastError());
+    }
+
     @Override
     public void setTargetTags(String clientId,String targetType,String target,List<String> tags) throws StatsEngineException {
-        log.info("setTargetTags for client: {} target type: {} targer: {} tags: {}",new Object[]{clientId,targetType,target,tags});
-        //TODO find counter and upsert tags field
+        log.info("setTargetTags for client: {} target type: {} target: {} tags: {}",new Object[]{clientId,targetType,target,tags});
+        //Find targets and upsert tags field
+        BasicDBObject q = new BasicDBObject();
+        q.put(EVENT_CLIENT_ID,clientId);        
+        q.put(EVENT_TARGET_TYPE,targetType);
+        q.put(EVENT_TARGET,target);
+
+        BasicDBObject doc = new BasicDBObject();
+        doc.put("$set", createSetOwnersTagsDoc(null,tags,false));
+        
+        WriteResult wsTargets = getTargetCollection().update(q,doc,true,true);
+        WriteResult wsCounters = getCounterCollection().update(q,doc,true,true);
+        //log.debug("setTargetTags result: {}",ws.getLastError());
     }
-     */
+
 
     protected String getTargetScopeCollectionName(String prefix,StatEvent event, TimeScope timeScope) {
         if(TimeScope.GLOBAL.equals(timeScope) || timeScope == null) {
@@ -468,6 +495,10 @@ public class MongoStatsEngine implements StatsEngine {
         }
     }
 
+    protected DBCollection getTargetCollection()  throws StatsEngineException {
+        return getFullTargetCollection((StatEvent)null, TimeScope.GLOBAL);
+    }
+
     protected DBCollection getFullTargetCollection(Date date, TimeScope timeScope) throws StatsEngineException {
         StatEvent event = new StatEvent();
         event.setDate(date);
@@ -502,6 +533,10 @@ public class MongoStatsEngine implements StatsEngine {
             collectionMap.put(name, target);
         }
         return target;
+    }
+
+    protected DBCollection getCounterCollection() throws StatsEngineException {
+        return getCounterCollection((StatEvent)null,TimeScope.GLOBAL);
     }
 
     protected DBCollection getCounterCollection(StatEvent event, TimeScope timeScope) throws StatsEngineException {
@@ -598,12 +633,16 @@ public class MongoStatsEngine implements StatsEngine {
     }
 
     private BasicDBObject createAddToSetOwnersTagsDoc(StatEvent event) {
+        return createSetOwnersTagsDoc(event.getTargetOwners(), event.getTargetTags(),true);
+    }
+
+    private BasicDBObject createSetOwnersTagsDoc(List<String> owners,List<String> tags,boolean addToSet) {
         BasicDBObject doc = new BasicDBObject();
-        if(event.getTargetOwners() != null) {
-            doc.append(EVENT_TARGET_OWNERS, new BasicDBObject("$each",event.getTargetOwners()));
+        if(owners != null) {
+            doc.append(EVENT_TARGET_OWNERS, addToSet ? new BasicDBObject("$each",owners) : owners);
         }
-        if(event.getTargetTags() != null) {
-            doc.append(EVENT_TARGET_TAGS, new BasicDBObject("$each",event.getTargetTags()));
+        if(tags != null) {
+            doc.append(EVENT_TARGET_TAGS, addToSet ? new BasicDBObject("$each",tags) : tags);
         }
         return doc;
     }
