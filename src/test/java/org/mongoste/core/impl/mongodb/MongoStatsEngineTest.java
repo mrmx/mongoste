@@ -334,8 +334,7 @@ public class MongoStatsEngineTest {
 
         DBObject targetCounter = counters.find().next();
         assertNotNull(targetCounter);
-        BasicDBList counterTags = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_TAGS);
-        assertNull(tags);
+        BasicDBList counterTags = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_TAGS);        
 
         //Check single tag
         engine.setTargetTags(event.getClientId(), event.getTargetType(),event.getTarget(), Arrays.asList("tag1"));
@@ -398,6 +397,7 @@ public class MongoStatsEngineTest {
         //Create event with null owner list
         event.setTargetOwners(null);
         engine.logEvent(event);
+
         DBCollection targets = engine.getTargetCollection();
         assertNotNull(targets);
         assertEquals(1,targets.count());
@@ -406,7 +406,6 @@ public class MongoStatsEngineTest {
         assertNotNull(counters);
         assertEquals(1,counters.count());
 
-
         DBObject target = targets.find().next();
         assertNotNull(target);
         BasicDBList owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
@@ -414,34 +413,60 @@ public class MongoStatsEngineTest {
 
         DBObject targetCounter = counters.find().next();
         assertNotNull(targetCounter);
-        BasicDBList counterTags = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_TAGS);
-        assertNull(counterTags);
+        BasicDBList counterOwners = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_OWNERS);
 
         //Check single owner
         engine.setTargetOwners(event.getClientId(), event.getTargetType(),event.getTarget(), Arrays.asList("own1"));
         target = targets.find().next();
         assertNotNull(target);
+        targetCounter = counters.find().next();
+        assertNotNull(targetCounter);
+
         owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
         assertNotNull(owners);
         assertEquals(1,owners.size());
         assertEquals("own1",owners.get(0));
+
+        counterOwners = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_OWNERS);
+        assertNotNull(counterOwners);
+        assertEquals(1,counterOwners.size());
+        assertEquals("own1",counterOwners.get(0));
+
         //Check add owner
         engine.setTargetOwners(event.getClientId(), event.getTargetType(),event.getTarget(), Arrays.asList("own1","own2"));
         target = targets.find().next();
         assertNotNull(target);
+        targetCounter = counters.find().next();
+        assertNotNull(targetCounter);
+
         owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
         assertNotNull(owners);
         assertEquals(2,owners.size());
         assertEquals("own1",owners.get(0));
         assertEquals("own2",owners.get(1));
+
+        counterOwners = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_OWNERS);
+        assertNotNull(counterOwners);
+        assertEquals(2,counterOwners.size());
+        assertEquals("own1",counterOwners.get(0));
+        assertEquals("own2",counterOwners.get(1));
+
         //Check remove owner
         engine.setTargetOwners(event.getClientId(), event.getTargetType(),event.getTarget(), Arrays.asList("own2"));
         target = targets.find().next();
         assertNotNull(target);
+        targetCounter = counters.find().next();
+        assertNotNull(targetCounter);
+
         owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
         assertNotNull(owners);
         assertEquals(1,owners.size());
         assertEquals("own2",owners.get(0));
+
+        counterOwners = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_OWNERS);
+        assertNotNull(counterOwners);
+        assertEquals(1,counterOwners.size());
+        assertEquals("own2",counterOwners.get(0));
     }
 
     @Test
