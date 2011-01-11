@@ -34,7 +34,7 @@ public interface StatsEngine {
     public boolean isCountEvents();
     
     public void init(Properties properties) throws StatsEngineException;
-    public void logEvent(StatEvent event) throws StatsEngineException;
+    public void handleEvent(StatEvent event) throws StatsEngineException;
     public void buildStats() throws StatsEngineException;
 
     public List<StatAction> getActions(String clientId) throws StatsEngineException;

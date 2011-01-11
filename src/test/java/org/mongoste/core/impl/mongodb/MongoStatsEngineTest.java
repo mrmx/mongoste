@@ -88,12 +88,12 @@ public class MongoStatsEngineTest {
     }
 
     /**
-     * Test of logEvent method, of class MongoStatsEngine.
+     * Test of handleEvent method, of class MongoStatsEngine.
      */
     @Test
     public void testLogEvent() throws Exception {
         System.out.println("logEvent");
-        engine.logEvent(engine.createSampleEvent());
+        engine.handleEvent(engine.createSampleEvent());
     }
 
     /**
@@ -112,8 +112,8 @@ public class MongoStatsEngineTest {
     public void testGetActions() throws Exception {
         System.out.println("getActions");
         StatEvent event = engine.createSampleEvent();
-        engine.logEvent(event);
-        engine.logEvent(event);
+        engine.handleEvent(event);
+        engine.handleEvent(event);
         List<StatAction> result = engine.getActions(event.getClientId());
         assertNotNull(result);
         assertEquals(1, result.size());
@@ -212,7 +212,7 @@ public class MongoStatsEngineTest {
     public void testGetTopTargets() throws Exception {
         System.out.println("getTopTargets");
         StatEvent event = engine.createSampleEvent();
-        engine.logEvent(event);
+        engine.handleEvent(event);
         List<StatBasicCounter> result = engine.getTopTargets(event.getClientId(), event.getTargetType(), event.getAction(), null);
         assertNotNull(result);
         assertEquals(1, result.size());
@@ -237,7 +237,7 @@ public class MongoStatsEngineTest {
         StatEvent event = engine.createSampleEvent();
         //Check null owner list
         event.setTargetOwners(null);
-        engine.logEvent(event);
+        engine.handleEvent(event);
         DBCollection targets = engine.getTargetCollection();
         assertNotNull(targets);
         assertEquals(1,targets.count());
@@ -247,7 +247,7 @@ public class MongoStatsEngineTest {
         assertNull(owners);
         //Check single owner
         event.setTargetOwners(Arrays.asList("owner1"));
-        engine.logEvent(event);
+        engine.handleEvent(event);
         target = targets.find().next();
         assertNotNull(target);
         owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
@@ -256,12 +256,12 @@ public class MongoStatsEngineTest {
         assertEquals("owner1",owners.get(0));
         //Check add owners
         event.setTargetOwners(Arrays.asList("owner2"));
-        engine.logEvent(event);
+        engine.handleEvent(event);
         //next month
         Calendar cal = DateUtil.trimTime(DateUtil.getCalendarGMT0());
         cal.add(Calendar.MONTH,1);
         event.setDate(cal.getTime());
-        engine.logEvent(event);
+        engine.handleEvent(event);
         target = targets.find().next();
         assertNotNull(target);
         owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
@@ -277,7 +277,7 @@ public class MongoStatsEngineTest {
         StatEvent event = engine.createSampleEvent();
         //Check null tag list
         event.setTargetTags(null);
-        engine.logEvent(event);
+        engine.handleEvent(event);
         DBCollection targets = engine.getTargetCollection();
         assertNotNull(targets);
         assertEquals(1,targets.count());
@@ -287,7 +287,7 @@ public class MongoStatsEngineTest {
         assertNull(tags);
         //Check single tag
         event.setTargetTags(Arrays.asList("tag1"));
-        engine.logEvent(event);
+        engine.handleEvent(event);
         target = targets.find().next();        
         assertNotNull(target);
         tags = (BasicDBList) target.get(engine.EVENT_TARGET_TAGS);
@@ -296,12 +296,12 @@ public class MongoStatsEngineTest {
         assertEquals("tag1",tags.get(0));
         //Check add tag
         event.setTargetTags(Arrays.asList("tag2"));
-        engine.logEvent(event);
+        engine.handleEvent(event);
         //next month
         Calendar cal = DateUtil.trimTime(DateUtil.getCalendarGMT0());
         cal.add(Calendar.MONTH,1);
         event.setDate(cal.getTime());
-        engine.logEvent(event);
+        engine.handleEvent(event);
         target = targets.find().next();
         assertNotNull(target);
         tags = (BasicDBList) target.get(engine.EVENT_TARGET_TAGS);
@@ -317,7 +317,7 @@ public class MongoStatsEngineTest {
         StatEvent event = engine.createSampleEvent();
         //Create event with null tag list
         event.setTargetTags(null);
-        engine.logEvent(event);        
+        engine.handleEvent(event);
 
         DBCollection targets = engine.getTargetCollection();
         assertNotNull(targets);
@@ -396,7 +396,7 @@ public class MongoStatsEngineTest {
         StatEvent event = engine.createSampleEvent();
         //Create event with null owner list
         event.setTargetOwners(null);
-        engine.logEvent(event);
+        engine.handleEvent(event);
 
         DBCollection targets = engine.getTargetCollection();
         assertNotNull(targets);
@@ -477,14 +477,14 @@ public class MongoStatsEngineTest {
         System.out.println("2 events for "+cal.getTime());
         StatEvent event = engine.createSampleEvent();
         event.setDate(cal.getTime());
-        engine.logEvent(event);
+        engine.handleEvent(event);
         cal.add(Calendar.HOUR_OF_DAY,1);
         event.setDate(cal.getTime());
-        engine.logEvent(event);
+        engine.handleEvent(event);
         cal.add(Calendar.MONTH,1);
         System.out.println("1 event for "+cal.getTime());
         event.setDate(cal.getTime());        
-        engine.logEvent(event);
+        engine.handleEvent(event);
         //Events in two months: 2 docs in target collection
         DBCollection targets = engine.getFullTargetCollection((StatEvent)null, TimeScope.GLOBAL);
         assertNotNull(targets);
@@ -493,7 +493,7 @@ public class MongoStatsEngineTest {
         cal.add(Calendar.DATE,1);
         System.out.println("1 event for "+cal.getTime());
         event.setDate(cal.getTime());
-        engine.logEvent(event);
+        engine.handleEvent(event);
         targets = engine.getFullTargetCollection((StatEvent)null, TimeScope.GLOBAL);
         assertNotNull(targets);
         assertEquals(2,targets.count());
@@ -540,7 +540,7 @@ public class MongoStatsEngineTest {
     public void testGetMultiTargetActionCount() throws Exception {
         System.out.println("getMultiTargetActionCount");
         StatEvent event = engine.createSampleEvent();
-        engine.logEvent(event);
+        engine.handleEvent(event);
         List<String> targets = Arrays.asList(event.getTarget());
         Map result = engine.getMultiTargetActionCount(event.getClientId(), event.getTargetType(), targets);
         assertNotNull(result);
@@ -555,7 +555,7 @@ public class MongoStatsEngineTest {
     public void testGetOwnerActionCount() throws Exception {
         System.out.println("getOwnerActionCount");
         StatEvent event = engine.createSampleEvent();
-        engine.logEvent(event);
+        engine.handleEvent(event);
         String owner = event.getTargetOwners().get(0);
         System.out.println("Search for owner:"+owner);
         Map result = engine.getOwnerActionCount(event.getClientId(), event.getTargetType(), owner);

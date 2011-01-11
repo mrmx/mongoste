@@ -156,7 +156,7 @@ public class MongoStatsEngine implements StatsEngine {
     }
     
     @Override
-    public void logEvent(StatEvent event) throws StatsEngineException {
+    public void handleEvent(StatEvent event) throws StatsEngineException {
         checkEvent(event);
         if(keepEvents) {
             saveEvent(event);
@@ -723,7 +723,7 @@ public class MongoStatsEngine implements StatsEngine {
                 event.setTargetType("work");
                 //event.getMetadata().put("sessionId", j * 100 + metaCount );
                 event.getMetadata().put("ip", "192.168.1." + ((metaCount) % 10) );
-                statsEngine.logEvent(event);
+                statsEngine.handleEvent(event);
                 metaCount = metaCount + (i % 2);
                 cal.add(Calendar.HOUR_OF_DAY,i % 4);
             }
