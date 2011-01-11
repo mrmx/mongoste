@@ -18,6 +18,7 @@ package org.mongoste.core.impl.mongodb;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
+import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,5 +97,10 @@ public final class MongoUtil {
             }
         }
         return result;
+    }
+
+    public static void close(DBCursor dbc) {
+        //TODO incoming driver version method:
+        //dbc.close();
     }
 }
