@@ -28,8 +28,6 @@ import org.slf4j.LoggerFactory;
  * @author mrmx
  */
 public final class MongoUtil {
-    public static final String DOT_STR                = ".";
-
     private static final String JS_FN_ADD = "db.system.js.save( { _id : \"%s\" , value : %s } );";
     private static final String JS_FN_DEL = "db.system.js.remove( {_id: \"%s\"} );";
 
@@ -53,18 +51,6 @@ public final class MongoUtil {
         db.eval(String.format(JS_FN_ADD, functionName,body));
     }
 
-    public static String createDotPath(Object... items) {
-        StringBuilder sb = new StringBuilder();
-        boolean hasNext = false;
-        for(Object item : items ) {
-            if(hasNext) {
-                sb.append(DOT_STR);
-            }
-            sb.append(String.valueOf(item));
-            hasNext = true;
-        }
-        return sb.toString();
-    }
 
     public static DBObject createDoc(Object... values) {
         if (values != null && values.length % 2 != 0) {

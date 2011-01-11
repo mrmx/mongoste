@@ -16,6 +16,7 @@
 package org.mongoste.core.impl.mongodb;
 
 import org.mongoste.core.StatsEngine;
+import org.mongoste.core.AbstractStatsEngine;
 import org.mongoste.core.StatsEngineException;
 import org.mongoste.model.StatEvent;
 import org.mongoste.core.TimeScope;
@@ -52,7 +53,7 @@ import java.util.Properties;
  * MongoDB stats engine implementation
  * @author mrmx
  */
-public class MongoStatsEngine implements StatsEngine {
+public class MongoStatsEngine extends  AbstractStatsEngine {
     private static Logger log = LoggerFactory.getLogger(MongoStatsEngine.class);
 
     private Mongo mongo;
@@ -100,7 +101,6 @@ public class MongoStatsEngine implements StatsEngine {
     
     
     private boolean resetCollections = false; //For testing debug!!!!
-    private boolean keepEvents = true;
     private boolean countEvents = true;
 
     public MongoStatsEngine() {
@@ -114,27 +114,14 @@ public class MongoStatsEngine implements StatsEngine {
         return resetCollections;
     }
 
-    @Override
-    public void setKeepEvents(boolean keepEvents) {
-        this.keepEvents = keepEvents;
-    }
-
-    @Override
-    public boolean isKeepEvents() {
-        return keepEvents;
-    }
-
-    @Override
     public void setCountEvents(boolean countEvents) {
         this.countEvents = countEvents;
     }
-
-    @Override
+    
     public boolean isCountEvents() {
         return countEvents;
     }
-
-
+    
     @Override
     public void init(Properties properties) throws StatsEngineException {
         String host = properties.getProperty("host","localhost");
@@ -158,7 +145,7 @@ public class MongoStatsEngine implements StatsEngine {
     @Override
     public void handleEvent(StatEvent event) throws StatsEngineException {
         checkEvent(event);
-        if(keepEvents) {
+        if(isKeepEvents()) {
             saveEvent(event);
         }
         if(countEvents){
@@ -172,15 +159,14 @@ public class MongoStatsEngine implements StatsEngine {
     }
 
     @Override
-    public void buildStats() {
-        TimeScope scope = TimeScope.GLOBAL;
+    public void buildStats(TimeScope scope) {
         String map = getFunction(FN_MAPPER_TARGETS+TimeScope.DAILY.getKey().toUpperCase());
         String red = getFunction(FN_REDUCER_TARGETS);
         Date now = DateUtil.getDateGMT0();
-        String result = getTargetScopeCollectionName(COLLECTION_STATS,now, TimeScope.GLOBAL);
+        String result = getTargetScopeCollectionName(COLLECTION_STATS,now, scope);
         DBCollection sourceTargetCol;
         try {
-            sourceTargetCol = getFullTargetCollection(now, TimeScope.GLOBAL);
+            sourceTargetCol = getFullTargetCollection(now, scope);
             sourceTargetCol.mapReduce(map, red, result, EMPTY_DOC);
         } catch (StatsEngineException ex) {
             log.error("Map reducing",ex);
@@ -228,7 +214,7 @@ public class MongoStatsEngine implements StatsEngine {
         try {
             DBCollection counters = getCounterCollection(null, TimeScope.GLOBAL);
             DBObject query = MongoUtil.createDoc(EVENT_CLIENT_ID,clientId,EVENT_TARGET_TYPE,targetType);
-            String actionCountPath = MongoUtil.createDotPath(EVENT_ACTION,action,FIELD_COUNT);
+            String actionCountPath = createDotPath(EVENT_ACTION,action,FIELD_COUNT);
             DBObject order = MongoUtil.createDoc(actionCountPath,-1);
             log.debug("Ensuring index for {}",order);
             counters.ensureIndex(order);
@@ -426,15 +412,15 @@ public class MongoStatsEngine implements StatsEngine {
         //BasicDBObject docSet = new BasicDBObject();
         doc.put("$addToSet", createAddToSetOwnersTagsDoc(event));
         BasicDBObject incDoc = new BasicDBObject();
-        String dayKey = MongoUtil.createDotPath(FIELD_DAYS , event.getDay());
-        String hourKey = MongoUtil.createDotPath(dayKey ,FIELD_HOURS , event.getHour());
+        String dayKey = createDotPath(FIELD_DAYS , event.getDay());
+        String hourKey = createDotPath(dayKey ,FIELD_HOURS , event.getHour());
         incDoc.put(FIELD_COUNT, 1); //Month count
-        incDoc.put(MongoUtil.createDotPath(dayKey ,FIELD_COUNT),1); //Day count
-        incDoc.put(MongoUtil.createDotPath(hourKey,FIELD_COUNT), 1);//Hour count
+        incDoc.put(createDotPath(dayKey ,FIELD_COUNT),1); //Day count
+        incDoc.put(createDotPath(hourKey,FIELD_COUNT), 1);//Hour count
         //Count metadata
         Map<String,Object> metadata = event.getMetadata();
         for(String metaKey : metadata.keySet()) {
-            incDoc.put(MongoUtil.createDotPath(hourKey ,FIELD_META , metaKey ,metaKeyValue(metaKey, metadata.get(metaKey) )),1);
+            incDoc.put(createDotPath(hourKey ,FIELD_META , metaKey ,metaKeyValue(metaKey, metadata.get(metaKey) )),1);
         }
         doc.put("$inc",incDoc);
         DBCollection targets = getFullTargetCollection(event,TimeScope.GLOBAL);
@@ -447,15 +433,15 @@ public class MongoStatsEngine implements StatsEngine {
         q.put(EVENT_CLIENT_ID,event.getClientId());
         q.put(EVENT_TARGET,event.getTarget());
         q.put(EVENT_TARGET_TYPE,event.getTargetType());
-        String actionKey = MongoUtil.createDotPath(EVENT_ACTION,event.getAction());
+        String actionKey = createDotPath(EVENT_ACTION,event.getAction());
 
         BasicDBObject doc = new BasicDBObject();
         doc.put("$addToSet", createAddToSetOwnersTagsDoc(event));
         BasicDBObject docSet = new BasicDBObject();
-        docSet.put(MongoUtil.createDotPath(actionKey,TOUCH_DATE), DateUtil.getDateGMT0());
+        docSet.put(createDotPath(actionKey,TOUCH_DATE), DateUtil.getDateGMT0());
         doc.put("$set", docSet);
         BasicDBObject incDoc = new BasicDBObject();
-        incDoc.put(MongoUtil.createDotPath(actionKey,FIELD_COUNT), 1); //Global count
+        incDoc.put(createDotPath(actionKey,FIELD_COUNT), 1); //Global count
         doc.put("$inc",incDoc);
         DBCollection targets = getCounterCollection(event,TimeScope.GLOBAL);
         WriteResult ws = targets.update(q,doc,true,false);
@@ -473,7 +459,7 @@ public class MongoStatsEngine implements StatsEngine {
         doc.put("$set", docSet);
         BasicDBObject incDoc = new BasicDBObject();
         incDoc.put(FIELD_TOTAL,1);
-        incDoc.put(MongoUtil.createDotPath(ACTION_TARGET,event.getTargetType(),FIELD_COUNT) ,1);
+        incDoc.put(createDotPath(ACTION_TARGET,event.getTargetType(),FIELD_COUNT) ,1);
         doc.put("$inc",incDoc);
         DBCollection targetActions = getTargetActionsCollection();
         WriteResult ws = targetActions.update(q,doc,true,false);
