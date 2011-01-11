@@ -40,6 +40,7 @@ public interface StatsEngine {
     public List<StatAction> getActions(String clientId) throws StatsEngineException;
     public List<StatBasicCounter> getTopTargets(String clientId,String targetType,String action,Integer limit) throws StatsEngineException;
     public Map<String,Long> getMultiTargetActionCount(String clientId,String targetType,List<String> targets) throws StatsEngineException;
+    public Map<String,Long> getOwnerActionCount(String clientId,String targetType,String owner,String... tags) throws StatsEngineException;
 
     public void setTargetOwners(String clientId,String targetType,String target,List<String> owners) throws StatsEngineException;
     public void setTargetTags(String clientId,String targetType,String target,List<String> tags) throws StatsEngineException;

@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -253,22 +254,43 @@ public class MongoStatsEngine implements StatsEngine {
     @Override
     public Map<String,Long> getMultiTargetActionCount(String clientId,String targetType,List<String> targets) throws StatsEngineException {
         log.info("getMultiTargetActionCount for client: {} target type: {}",clientId,targetType);
+        DBObject query = MongoUtil.createDoc(
+            EVENT_CLIENT_ID,clientId,
+            EVENT_TARGET_TYPE,targetType,
+            EVENT_TARGET,new BasicDBObject("$in",targets)
+        );
+        return getActionCount(query);
+    }
+
+    @Override
+    public Map<String,Long> getOwnerActionCount(String clientId,String targetType,String owner,String... tags) throws StatsEngineException {
+        log.info("getOwnerActionCount for client: {} target type: {} owner: {}",new Object[]{clientId,targetType,owner});
+        DBObject query = MongoUtil.createDoc(
+            EVENT_CLIENT_ID,clientId,
+            EVENT_TARGET_TYPE,targetType,
+            EVENT_TARGET_OWNERS,owner
+        );
+        if(tags != null){
+            if(tags.length == 1) {
+                query.put(EVENT_TARGET_TAGS, tags[0]);
+            } else if(tags.length > 1) {
+                query.put(EVENT_TARGET_TAGS, new BasicDBObject("$in",Arrays.asList(tags)));
+            }
+        }
+        return getActionCount(query);
+    }
+
+    private Map<String,Long> getActionCount(DBObject query) throws StatsEngineException {
         Map<String,Long> result = new HashMap<String, Long>();
+        DBCursor dbc = null;
         try {
-            DBCollection counters = getCounterCollection(null, TimeScope.GLOBAL);
-            DBObject query = MongoUtil.createDoc(
-                    EVENT_CLIENT_ID,clientId,
-                    EVENT_TARGET_TYPE,targetType,
-                    EVENT_TARGET,new BasicDBObject("$in",targets)
-            );
             log.debug("Querying counters");
+            DBCollection counters = getCounterCollection(null, TimeScope.GLOBAL);
             long t = System.currentTimeMillis();
-            DBCursor dbc = counters.find(query,MongoUtil.createDoc(EVENT_ACTION,1));
+            dbc = counters.find(query,MongoUtil.createDoc(EVENT_ACTION,1));
             t = System.currentTimeMillis() - t;
             if(t > 1000) {
-                log.warn("getMultiTargetActionCount for client: {} target type: {} query took {}s",new Object[]{
-                    clientId,targetType,t / 1000.0
-                });
+                log.warn("getActionCount query: {} took {}s", query, t / 1000.0);
             }
             BasicDBObject actionCounters,counter;
             String action;
@@ -290,13 +312,16 @@ public class MongoStatsEngine implements StatsEngine {
             }
             t = System.currentTimeMillis() - t;
             if(t > 1000) {
-                log.warn("getMultiTargetActionCount for client: {} target type: {} count took {}s",new Object[]{
-                    clientId,targetType,t / 1000.0
-                });
+                log.warn("getActionCount query fetch: {} took {}s", query, t / 1000.0);
             }
         }catch(Exception ex) {
-            log.error("getMultiTargetActionCount",ex);
-            throw new StatsEngineException("getMultiTargetActionCount", ex);
+            log.error("getActionCount",ex);
+            if(ex instanceof StatsEngineException) {
+                throw (StatsEngineException)ex;
+            }
+            throw new StatsEngineException("getActionCount", ex);
+        } finally {
+            MongoUtil.close(dbc);
         }
         return result;
     }

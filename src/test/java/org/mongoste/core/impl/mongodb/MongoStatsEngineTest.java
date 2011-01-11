@@ -548,4 +548,45 @@ public class MongoStatsEngineTest {
         System.out.println("result:"+result);
     }
 
+    /**
+     * Test of getOwnerActionCount method, of class MongoStatsEngine.
+     */
+    @Test
+    public void testGetOwnerActionCount() throws Exception {
+        System.out.println("getOwnerActionCount");
+        StatEvent event = engine.createSampleEvent();
+        engine.logEvent(event);
+        String owner = event.getTargetOwners().get(0);
+        System.out.println("Search for owner:"+owner);
+        Map result = engine.getOwnerActionCount(event.getClientId(), event.getTargetType(), owner);
+        assertNotNull(result);
+        assertEquals(1,result.size());
+        //No result
+        result = engine.getOwnerActionCount(
+                event.getClientId(), event.getTargetType(),
+                "unknown-owner"
+        );
+        assertNotNull(result);
+        assertEquals(0,result.size());
+        System.out.println("result:"+result);
+        //Search with tags
+        result = engine.getOwnerActionCount(
+                event.getClientId(),
+                event.getTargetType(), owner,
+                event.getTargetTags().toArray(new String[]{})
+        );
+        assertNotNull(result);
+        assertEquals(1,result.size());
+        System.out.println("result:"+result);
+        //Empty result search with unknown tag
+        result = engine.getOwnerActionCount(
+                event.getClientId(),
+                event.getTargetType(), owner,
+                "unknown-tag"
+        );
+        assertNotNull(result);
+        assertEquals(0,result.size());
+        System.out.println("result:"+result);
+    }
+
 }
