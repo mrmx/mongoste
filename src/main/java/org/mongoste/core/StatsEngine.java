@@ -41,5 +41,6 @@ public interface StatsEngine {
     public Map<String,Long> getOwnerActionCount(String clientId,String targetType,String owner,String... tags) throws StatsEngineException;
 
     public void setTargetOwners(String clientId,String targetType,String target,List<String> owners) throws StatsEngineException;
+    public void setTargetOwners(String clientId,String targetType,List<String> targets,List<String> owners) throws StatsEngineException;
     public void setTargetTags(String clientId,String targetType,String target,List<String> tags) throws StatsEngineException;
 }

@@ -17,6 +17,9 @@ package org.mongoste.core;
 
 import org.apache.commons.lang.StringUtils;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Base class for all engines
  * @author mrmx
@@ -36,6 +39,11 @@ public abstract class AbstractStatsEngine implements StatsEngine {
     @Override
     public boolean isKeepEvents() {
         return keepEvents;
+    }
+
+    @Override
+    public void setTargetOwners(String clientId, String targetType, String target, List<String> owners) throws StatsEngineException {
+        setTargetOwners(clientId, targetType, Arrays.asList(target), owners);
     }
 
     /**

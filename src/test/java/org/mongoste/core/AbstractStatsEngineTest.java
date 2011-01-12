@@ -107,7 +107,7 @@ public class AbstractStatsEngineTest {
         }
 
         @Override
-        public void setTargetOwners(String clientId, String targetType, String target, List<String> owners) throws StatsEngineException {
+        public void setTargetOwners(String clientId, String targetType, List<String> targets, List<String> owners) throws StatsEngineException {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 

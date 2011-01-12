@@ -257,11 +257,7 @@ public class MongoStatsEngine extends  AbstractStatsEngine {
             EVENT_TARGET_OWNERS,owner
         );
         if(tags != null){
-            if(tags.length == 1) {
-                query.put(EVENT_TARGET_TAGS, tags[0]);
-            } else if(tags.length > 1) {
-                query.put(EVENT_TARGET_TAGS, new BasicDBObject("$in",Arrays.asList(tags)));
-            }
+            putSingleInDoc(query, EVENT_TARGET_TAGS, Arrays.asList(tags));
         }
         return getActionCount(query);
     }
@@ -313,13 +309,13 @@ public class MongoStatsEngine extends  AbstractStatsEngine {
     }
 
     @Override
-    public void setTargetOwners(String clientId,String targetType,String target,List<String> owners) throws StatsEngineException {
-        log.info("setTargetOwners for client: {} target type: {} target: {} owners: {}",new Object[]{clientId,targetType,target,owners});
+    public void setTargetOwners(String clientId,String targetType,List<String> targets,List<String> owners) throws StatsEngineException {
+        log.info("setTargetOwners for client: {} target type: {}\ntargets: {}\nowners: {}",new Object[]{clientId,targetType,targets,owners});
         //Find targets and upsert owners field
         BasicDBObject q = new BasicDBObject();
         q.put(EVENT_CLIENT_ID,clientId);
         q.put(EVENT_TARGET_TYPE,targetType);
-        q.put(EVENT_TARGET,target);
+        putSingleInDoc(q,EVENT_TARGET,targets);        
 
         BasicDBObject doc = new BasicDBObject();
         doc.put("$set", createSetOwnersTagsDoc(owners,null,false));
@@ -656,6 +652,26 @@ public class MongoStatsEngine extends  AbstractStatsEngine {
             doc.append(EVENT_TARGET_TAGS, addToSet ? new BasicDBObject("$each",tags) : tags);
         }
         return doc;
+    }
+    
+    private void putSingleInDoc(DBObject doc, String key, List values) {
+        Object value = createSingleInDoc(values);
+        if(value != null) {
+            doc.put(key, value);
+        }
+    }
+
+    private Object createSingleInDoc(List values) {
+        Object result = null;
+        if(values == null || values.isEmpty()) {
+            return null;
+        }
+        if(values.size() == 1) {
+           result = values.get(0);
+        } else if(values.size() > 1) {
+           result = new BasicDBObject("$in", values);
+        }
+        return result;
     }
 
     private String metaKeyValue(String key, Object value) {
