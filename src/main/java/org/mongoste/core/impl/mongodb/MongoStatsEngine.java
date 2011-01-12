@@ -277,6 +277,7 @@ public class MongoStatsEngine extends  AbstractStatsEngine {
             BasicDBObject actionCounters,counter;
             String action;
             Long count;
+            int processed = 0;
             t = System.currentTimeMillis();
             while(dbc.hasNext()) {
                 actionCounters = (BasicDBObject) dbc.next();
@@ -291,10 +292,13 @@ public class MongoStatsEngine extends  AbstractStatsEngine {
                     count += counter.getLong(FIELD_COUNT);
                     result.put(action,count);
                 }
+                processed++;
             }
             t = System.currentTimeMillis() - t;
             if(t > 1000) {
                 log.warn("getActionCount query fetch: {} took {}s", query, t / 1000.0);
+            } else {
+                log.info("getActionCount processed {} results in {}ms", processed, t );
             }
         }catch(Exception ex) {
             log.error("getActionCount",ex);
