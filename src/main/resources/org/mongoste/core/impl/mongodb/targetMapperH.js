@@ -4,12 +4,10 @@ function () {
     k.ida = this._ida;//EVENT_ACTION
     k.idk = this._idk;//EVENT_TARGET_TYPE
     k.idt = this._idt;//EVENT_TARGET
-    var metaUnique = "ip";
-    var d;
-    for (d in this.days) {
-        var day = this.days[d];
-        var h;
-        for (h in day.hours) {
+    var metaUnique = "ip";    
+    for (var d in this.days) {
+        var day = this.days[d];        
+        for (var h in day.hours) {
             var hour = day.hours[h];            
             k.date = new Date();
             k.date.setUTCFullYear(this.y);
@@ -19,16 +17,14 @@ function () {
             k.date.setUTCMinutes(0);
             k.date.setUTCSeconds(0);
             k.date.setUTCMilliseconds(0);
-            var meta;
-            for (meta in hour.meta) {
+            for (var meta in hour.meta) {
                 if(meta == metaUnique) {
                     var muHour = hour.meta[metaUnique];
-                    var mu;
-                    for (mu in muHour) {
+                    for (var mu in muHour) {
                         emit(k, { count: 0 , unique : 1 });
                     }
                 }
-            }            
+            }
             emit(k, { count : hour.count , unique : 0 });
         }
     }
