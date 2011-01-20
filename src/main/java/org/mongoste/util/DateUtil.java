@@ -26,7 +26,8 @@ import java.util.TimeZone;
  * @author mrmx
  */
 public class DateUtil {
-    public static final SimpleDateFormat FORMAT_ISO8601  = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
+    public static final SimpleDateFormat FORMAT_ISO8601     = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
+    public static final SimpleDateFormat FORMAT_YY_MM_DD      = new SimpleDateFormat("yyyy-M-dd");
 
     private final static TimeZone gmtTimeZone = new SimpleTimeZone(0, "GMT");
 
