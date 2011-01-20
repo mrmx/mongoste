@@ -35,6 +35,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+import static org.mockito.Mockito.*;
+
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
@@ -92,8 +94,8 @@ public class MongoStatsEngineTest {
      * Test of handleEvent method, of class MongoStatsEngine.
      */
     @Test
-    public void testLogEvent() throws Exception {
-        System.out.println("logEvent");
+    public void testHandleEvent() throws Exception {
+        System.out.println("handleEvent");
         engine.handleEvent(engine.createSampleEvent());
     }
 
