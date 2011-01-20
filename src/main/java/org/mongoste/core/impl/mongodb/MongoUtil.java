@@ -39,8 +39,7 @@ public final class MongoUtil {
                 continue;
             }
             log.warn("Dropping collection {}.{}", db.getName(),collection);
-            DBCollection col = db.getCollection(collection);
-            col.dropIndexes();
+            DBCollection col = db.getCollection(collection);           
             col.drop();
         }
     }
@@ -88,5 +87,19 @@ public final class MongoUtil {
     public static void close(DBCursor dbc) {
         //TODO incoming driver version method:
         //dbc.close();
+    }
+
+    public static void createIndexes(DBCollection collection, Object ... indexes) {
+        log.info("Indexing {} collection",collection.getFullName());
+        long t = System.currentTimeMillis();
+        for(Object index : indexes) {
+            if(index instanceof String) {
+                collection.ensureIndex((String)index);
+            }
+            if(index instanceof DBObject) {
+                collection.ensureIndex((DBObject)index);
+            }
+        }
+        log.info("Done indexing {} collection in {}ms",collection.getFullName(),System.currentTimeMillis()-t);
     }
 }
