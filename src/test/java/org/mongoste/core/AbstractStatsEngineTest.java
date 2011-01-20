@@ -15,18 +15,17 @@
  */
 package org.mongoste.core;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
 import org.mongoste.model.StatAction;
 import org.mongoste.model.StatBasicCounter;
 import org.mongoste.model.StatEvent;
+
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 /**
  *
@@ -35,21 +34,9 @@ import org.mongoste.model.StatEvent;
 public class AbstractStatsEngineTest {
     AbstractStatsEngine instance;
 
-    @BeforeClass
-    public static void setUpClass() throws Exception {
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception {
-    }
-
     @Before
     public void setUp() {
         instance = new AbstractStatsEngineImpl();
-    }
-
-    @After
-    public void tearDown() {
     }
 
     /**
