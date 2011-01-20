@@ -35,13 +35,14 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-import static org.mockito.Mockito.*;
 
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.text.ParseException;
 
 /**
  * MongoStatsEngine Test
@@ -52,6 +53,12 @@ public class MongoStatsEngineTest {
 
     private static class MongoStatsEngineEx extends MongoStatsEngine {
         public StatEvent createSampleEvent() {
+            return createSampleEvent(DateUtil.getDateGMT0());
+        }
+        public StatEvent createSampleEvent(String date) throws ParseException {
+            return createSampleEvent(DateUtil.FORMAT_YY_MM_DD.parse(date));
+        }
+        public StatEvent createSampleEvent(Date date) {
             StatEvent event = new StatEvent();
             event.setClientId("client");
             event.setAction("action");
@@ -59,7 +66,7 @@ public class MongoStatsEngineTest {
             event.setTarget("target");
             event.setTargetOwners(Arrays.asList("owner1","owner2"));
             event.setTargetTags(Arrays.asList("tag1","tag2"));
-            event.setDate(DateUtil.getDateGMT0());
+            event.setDate(date);
             return event;
         }
     }
@@ -100,15 +107,6 @@ public class MongoStatsEngineTest {
     }
 
     /**
-     * Test of buildStats method, of class MongoStatsEngine.
-     */
-    @Test
-    public void testBuildStats() {
-        System.out.println("buildStats");
-        //fail("The test case is a prototype.");
-    }
-
-    /**
      * Test of getActions method, of class MongoStatsEngine.
      */
     @Test
@@ -131,14 +129,14 @@ public class MongoStatsEngineTest {
     }
 
     /**
-     * Test of getTargetScopeCollectionName method, of class MongoStatsEngine.
+     * Test of getScopeCollectionName method, of class MongoStatsEngine.
      */
     @Test
-    public void testGetTargetScopeCollectionName() {
-        System.out.println("getTargetScopeCollectionName");
+    public void testGetScopeCollectionName() {
+        System.out.println("getScopeCollectionName");
         String collection = "collection";
         String expResult = collection;
-        String result = engine.getTargetScopeCollectionName(collection, null, TimeScope.GLOBAL);
+        String result = engine.getScopeCollectionName(collection, (StatEvent)null, TimeScope.GLOBAL);
         System.out.println("result:"+result);
         assertEquals(expResult, result);
         Calendar cal = Calendar.getInstance();
@@ -151,27 +149,27 @@ public class MongoStatsEngineTest {
         event.setDate(cal.getTime());
 
         TimeScope scope = TimeScope.ANNUAL;
-        result = engine.getTargetScopeCollectionName(collection, event, scope);
+        result = engine.getScopeCollectionName(collection, event, scope);
         System.out.println("result:"+result);
         expResult = collection + "_" + scope.getKey().toLowerCase() + year;
         assertEquals(expResult, result);
 
         scope = TimeScope.WEEKLY;
-        result = engine.getTargetScopeCollectionName(collection, event, scope);
+        result = engine.getScopeCollectionName(collection, event, scope);
         System.out.println("result:"+result);
         expResult = collection + "_" + scope.getKey().toLowerCase() + year;
         expResult = expResult + "_" + week;
         assertEquals(expResult, result);
 
         scope = TimeScope.MONTHLY;
-        result = engine.getTargetScopeCollectionName(collection, event, scope);
+        result = engine.getScopeCollectionName(collection, event, scope);
         System.out.println("result:"+result);
         expResult = collection + "_" + scope.getKey().toLowerCase() + year;
         expResult = expResult + "_" + month;
         assertEquals(expResult, result);
 
         scope = TimeScope.DAILY;
-        result = engine.getTargetScopeCollectionName(collection, event, scope);
+        result = engine.getScopeCollectionName(collection, event, scope);
         System.out.println("result:"+result);
         expResult = collection + "_" + scope.getKey().toLowerCase() + year;
         expResult = expResult + "_" + month;
@@ -179,7 +177,7 @@ public class MongoStatsEngineTest {
         assertEquals(expResult, result);
 
         scope = TimeScope.HOURLY;
-        result = engine.getTargetScopeCollectionName(collection, event, scope);
+        result = engine.getScopeCollectionName(collection, event, scope);
         System.out.println("result:"+result);
         expResult = collection + "_" + scope.getKey().toLowerCase() + year;
         expResult = expResult + "_" + month;
@@ -582,7 +580,7 @@ public class MongoStatsEngineTest {
         event.setDate(cal.getTime());        
         engine.handleEvent(event);
         //Events in two months: 2 docs in target collection
-        DBCollection targets = engine.getFullTargetCollection((StatEvent)null, TimeScope.GLOBAL);
+        DBCollection targets = engine.getTargetCollection((StatEvent)null, TimeScope.GLOBAL);
         assertNotNull(targets);
         assertEquals(2,targets.count());
         //Add 3th event in second month: still 2 docs in target collection
@@ -590,7 +588,7 @@ public class MongoStatsEngineTest {
         System.out.println("1 event for "+cal.getTime());
         event.setDate(cal.getTime());
         engine.handleEvent(event);
-        targets = engine.getFullTargetCollection((StatEvent)null, TimeScope.GLOBAL);
+        targets = engine.getTargetCollection((StatEvent)null, TimeScope.GLOBAL);
         assertNotNull(targets);
         assertEquals(2,targets.count());
         DBCursor dbc = targets.find();
@@ -685,4 +683,41 @@ public class MongoStatsEngineTest {
         System.out.println("result:"+result);
     }
 
+    /**
+     * Test of buildStats method, of class MongoStatsEngine.
+     */
+    @Test
+    public void testBuildStatsMonthly() throws Exception {
+        System.out.println("buildStats monthly");
+        StatEvent event = engine.createSampleEvent("2011-01-01");
+        engine.handleEvent(event);
+        event = engine.createSampleEvent("2011-02-01");
+        engine.handleEvent(event);
+        engine.buildStats(TimeScope.GLOBAL,TimeScope.MONTHLY);
+        //Events in two months: 2 docs in stats collection
+        DBCollection stats = engine.getStatsCollection();
+        assertNotNull(stats);
+        assertEquals(2,stats.count());
+    }
+
+    /**
+     * Test of getOwnerActionCount method, of class MongoStatsEngine.
+     */
+    @Test
+    public void testGetStatsBetweenMonths() throws Exception {
+        System.out.println("testGetStatsBetweenDates");
+        StatEvent event1 = engine.createSampleEvent("2011-01-01");
+        engine.handleEvent(event1);
+        StatEvent event2 = engine.createSampleEvent("2011-02-01");
+        engine.handleEvent(event2);
+        /*
+        engine.buildStats(TimeScope.GLOBAL,TimeScope.MONTHLY);
+        //Events in two months: 2 docs in stats collection
+        DBCollection stats = engine.getStatsCollection();
+        assertNotNull(stats);
+        assertEquals(2,stats.count());
+         *
+         */
+        fail("todo");
+    }
 }

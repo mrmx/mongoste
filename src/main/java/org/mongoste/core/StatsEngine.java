@@ -27,13 +27,9 @@ import java.util.Properties;
  * Stats engine interface
  */
 public interface StatsEngine {
-    
-    public void setKeepEvents(boolean keepEvents);
-    public boolean isKeepEvents();
-
     public void init(Properties properties) throws StatsEngineException;
     public void handleEvent(StatEvent event) throws StatsEngineException;
-    public void buildStats(TimeScope scope) throws StatsEngineException;
+    public void buildStats(TimeScope scope,TimeScope groupBy) throws StatsEngineException;
 
     public List<StatAction> getActions(String clientId) throws StatsEngineException;
     public List<StatBasicCounter> getTopTargets(String clientId,String targetType,String action,Integer limit) throws StatsEngineException;

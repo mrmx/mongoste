@@ -100,8 +100,17 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     
     private boolean resetCollections = false; //For testing debug!!!!
     private boolean countEvents = true;
+    private boolean keepEvents = true;
 
     public MongoStatsEngine() {
+    }
+    
+    public void setKeepEvents(boolean keepEvents) {
+        this.keepEvents = keepEvents;
+    }
+
+    public boolean isKeepEvents() {
+        return keepEvents;
     }
 
     public void setResetCollections(boolean resetCollections) {
@@ -136,6 +145,8 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         }catch(MongoException ex) {
             throw new StatsEngineException("Getting db "+dbName,ex);
         }
+        setKeepEvents(Boolean.valueOf(properties.getProperty("events.keep", "true")));
+        setCountEvents(Boolean.valueOf(properties.getProperty("events.count", "true")));
         initCollections();
         initFunctions();
     }
@@ -148,26 +159,36 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         }
         if(countEvents){
             //Count event
-            countRawTarget(event);
-            //Global count event
-            countTarget(event);
-            //Count total actions/targets
-            countTargetActions(event);
+            if(countRawTarget(event)) {
+                //Global count event
+                countTarget(event);
+                //Count total actions/targets
+                countTargetActions(event);
+            } else throw new StatsEngineException("Raw count failed with event "+ event);
         }
     }
 
     @Override
-    public void buildStats(TimeScope scope) {
-        String map = getFunction(FN_MAPPER_TARGETS+TimeScope.DAILY.getKey().toUpperCase());
+    public void buildStats(TimeScope scope,TimeScope groupBy) {
+        TimeScope mapperScope = groupBy;
+        if(mapperScope == null) {
+            mapperScope = TimeScope.MONTHLY;
+        }
+        switch (mapperScope)  {
+            case GLOBAL:
+            case ANNUAL:
+            case WEEKLY:            
+                mapperScope = TimeScope.MONTHLY;
+        }
+        String map = getFunction(FN_MAPPER_TARGETS,mapperScope);
         String red = getFunction(FN_REDUCER_TARGETS);
         Date now = DateUtil.getDateGMT0();
-        String result = getTargetScopeCollectionName(COLLECTION_STATS,now, scope);
-        DBCollection sourceTargetCol;
-        try {
-            sourceTargetCol = getTargetCollection(now, scope);
-            sourceTargetCol.mapReduce(map, red, result, EMPTY_DOC);
+        String statsResultCollection = getScopeCollectionName(COLLECTION_STATS,now, scope);
+        DBObject queryTargets = EMPTY_DOC; //TODO
+        try {            
+            getTargetCollection().mapReduce(map, red, statsResultCollection, queryTargets);
         } catch (StatsEngineException ex) {
-            log.error("Map reducing",ex);
+            log.error("Map reducing targets",ex);
         }
     }
 
@@ -345,13 +366,13 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     }
 
 
-    protected String getTargetScopeCollectionName(String prefix,Date date, TimeScope timeScope) {
+    protected String getScopeCollectionName(String prefix,Date date, TimeScope timeScope) {
         StatEvent event = new StatEvent();
         event.setDate(date);
-        return getTargetScopeCollectionName(prefix,event,timeScope);
+        return getScopeCollectionName(prefix,event,timeScope);
     }
 
-    protected String getTargetScopeCollectionName(String prefix,StatEvent event, TimeScope timeScope) {
+    protected String getScopeCollectionName(String prefix,StatEvent event, TimeScope timeScope) {
         if(TimeScope.GLOBAL.equals(timeScope) || timeScope == null) {
             return prefix;
         }
@@ -402,34 +423,40 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         log.debug("saveEvent result: {}",ws.getLastError());
     }
 
-    private void countRawTarget(StatEvent event) throws StatsEngineException {
-        BasicDBObject q = new BasicDBObject();
-        q.put(EVENT_CLIENT_ID,event.getClientId());
-        q.put(EVENT_TARGET,event.getTarget());
-        q.put(EVENT_TARGET_TYPE,event.getTargetType());
-        q.put(EVENT_ACTION,event.getAction());
-        q.put(TARGET_YEAR, event.getYear());
-        q.put(TARGET_MONTH, event.getMonth());
+    private boolean countRawTarget(StatEvent event)  {
+        try {
+            BasicDBObject q = new BasicDBObject();
+            q.put(EVENT_CLIENT_ID,event.getClientId());
+            q.put(EVENT_TARGET,event.getTarget());
+            q.put(EVENT_TARGET_TYPE,event.getTargetType());
+            q.put(EVENT_ACTION,event.getAction());
+            q.put(TARGET_YEAR, event.getYear());
+            q.put(TARGET_MONTH, event.getMonth());
 
-        BasicDBObject doc = new BasicDBObject();
-        
-        //BasicDBObject docSet = new BasicDBObject();
-        doc.put("$addToSet", createAddToSetOwnersTagsDoc(event));
-        BasicDBObject incDoc = new BasicDBObject();
-        String dayKey = createDotPath(FIELD_DAYS , event.getDay());
-        String hourKey = createDotPath(dayKey ,FIELD_HOURS , event.getHour());
-        incDoc.put(FIELD_COUNT, 1); //Month count
-        incDoc.put(createDotPath(dayKey ,FIELD_COUNT),1); //Day count
-        incDoc.put(createDotPath(hourKey,FIELD_COUNT), 1);//Hour count
-        //Count metadata
-        Map<String,Object> metadata = event.getMetadata();
-        for(String metaKey : metadata.keySet()) {
-            incDoc.put(createDotPath(hourKey ,FIELD_META , metaKey ,metaKeyValue(metaKey, metadata.get(metaKey) )),1);
+            BasicDBObject doc = new BasicDBObject();
+
+            //BasicDBObject docSet = new BasicDBObject();
+            doc.put("$addToSet", createAddToSetOwnersTagsDoc(event));
+            BasicDBObject incDoc = new BasicDBObject();
+            String dayKey = createDotPath(FIELD_DAYS , event.getDay());
+            String hourKey = createDotPath(dayKey ,FIELD_HOURS , event.getHour());
+            incDoc.put(FIELD_COUNT, 1); //Month count
+            incDoc.put(createDotPath(dayKey ,FIELD_COUNT),1); //Day count
+            incDoc.put(createDotPath(hourKey,FIELD_COUNT), 1);//Hour count
+            //Count metadata
+            Map<String,Object> metadata = event.getMetadata();
+            for(String metaKey : metadata.keySet()) {
+                incDoc.put(createDotPath(hourKey ,FIELD_META , metaKey ,metaKeyValue(metaKey, metadata.get(metaKey) )),1);
+            }
+            doc.put("$inc",incDoc);
+            DBCollection targets = getTargetCollection(event,TimeScope.GLOBAL);
+            WriteResult ws = targets.update(q,doc,true,true);
+            //log.debug("countRawTarget result: {}",ws.getLastError());
+            return ws.getN() > 0;
+        }catch(Exception ex) {
+            log.error("countRawTarget failed",ex);
         }
-        doc.put("$inc",incDoc);
-        DBCollection targets = getTargetCollection(event,TimeScope.GLOBAL);
-        WriteResult ws = targets.update(q,doc,true,true);
-        //log.debug("countRawTarget result: {}",ws.getLastError());
+        return false;
     }
 
     private void countTarget(StatEvent event) throws StatsEngineException {
@@ -502,8 +529,12 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         }
     }
 
+    protected DBCollection getStatsCollection() throws StatsEngineException {
+        return getStatsCollection((StatEvent)null, TimeScope.GLOBAL);
+    }
+
     protected DBCollection getStatsCollection(StatEvent event, TimeScope timeScope) throws StatsEngineException {
-        String name = getTargetScopeCollectionName(COLLECTION_STATS, event, timeScope);
+        String name = getScopeCollectionName(COLLECTION_STATS, event, timeScope);
         DBCollection stats = collectionMap.get(name);
         if(stats == null) {
             stats = db.getCollection(name);
@@ -530,7 +561,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     }
 
     protected DBCollection getTargetCollection(StatEvent event, TimeScope timeScope) throws StatsEngineException {
-        String name = getTargetScopeCollectionName(COLLECTION_TARGETS, event, timeScope);
+        String name = getScopeCollectionName(COLLECTION_TARGETS, event, timeScope);
         DBCollection target = collectionMap.get(name);
         if(target == null) {
             target = db.getCollection(name);
@@ -566,7 +597,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     }
 
     protected DBCollection getCounterCollection(StatEvent event, TimeScope timeScope) throws StatsEngineException {
-        String name = getTargetScopeCollectionName(COLLECTION_COUNTERS, event, timeScope);
+        String name = getScopeCollectionName(COLLECTION_COUNTERS, event, timeScope);
         DBCollection target = collectionMap.get(name);
         if(target == null) {
             target = db.getCollection(name);
@@ -615,11 +646,16 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         MongoUtil.dropCollections(db);
     }
 
-    private void initFunctions() throws StatsEngineException {        
-        addFunction(FN_MAPPER_TARGETS+TimeScope.HOURLY.getKey().toUpperCase());
-        addFunction(FN_MAPPER_TARGETS+TimeScope.DAILY.getKey().toUpperCase());
+    private void initFunctions() throws StatsEngineException {
+        addFunction(FN_MAPPER_TARGETS,TimeScope.MONTHLY);
+        addFunction(FN_MAPPER_TARGETS,TimeScope.HOURLY);
+        addFunction(FN_MAPPER_TARGETS,TimeScope.DAILY);
         addFunction(FN_REDUCER_TARGETS);        
         addFunction(FN_REDUCER_PLAIN);        
+    }
+
+    private void addFunction(String functionNamePrefix,TimeScope scopeSubfix) throws StatsEngineException {
+        addFunction(getFunctionName(functionNamePrefix, scopeSubfix));
     }
 
     private void addFunction(String functionName) throws StatsEngineException {
@@ -646,6 +682,14 @@ public class MongoStatsEngine extends AbstractStatsEngine {
             functionMap = new HashMap<String, String>();
         }
         functionMap.put(functionName, body);
+    }
+
+    private String getFunctionName(String functionNamePrefix,TimeScope scopeSubfix) {
+        return functionNamePrefix + scopeSubfix.getKey().toUpperCase();
+    }
+
+    private String getFunction(String functionNamePrefix,TimeScope scopeSubfix) {
+        return getFunction(getFunctionName(functionNamePrefix, scopeSubfix));
     }
 
     private String getFunction(String functionName) {

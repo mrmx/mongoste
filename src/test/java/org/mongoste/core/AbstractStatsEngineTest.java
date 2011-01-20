@@ -69,7 +69,7 @@ public class AbstractStatsEngineTest {
         }
 
         @Override
-        public void buildStats(TimeScope scope) throws StatsEngineException {
+        public void buildStats(TimeScope scope,TimeScope groupByScope) throws StatsEngineException {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 

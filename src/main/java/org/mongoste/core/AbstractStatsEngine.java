@@ -29,17 +29,6 @@ public abstract class AbstractStatsEngine implements StatsEngine {
     static final char DOT_CHR                  = '.';
     static final char DOT_CHR_REPLACE          = '_';
 
-    private boolean keepEvents = true;
-
-    @Override
-    public void setKeepEvents(boolean keepEvents) {
-        this.keepEvents = keepEvents;
-    }
-
-    @Override
-    public boolean isKeepEvents() {
-        return keepEvents;
-    }
 
     @Override
     public void setTargetOwners(String clientId, String targetType, String target, List<String> owners) throws StatsEngineException {
