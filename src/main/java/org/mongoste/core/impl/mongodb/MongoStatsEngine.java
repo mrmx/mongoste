@@ -15,11 +15,10 @@
  */
 package org.mongoste.core.impl.mongodb;
 
-import org.mongoste.core.StatsEngine;
 import org.mongoste.core.AbstractStatsEngine;
 import org.mongoste.core.StatsEngineException;
-import org.mongoste.model.StatEvent;
 import org.mongoste.core.TimeScope;
+import org.mongoste.model.StatEvent;
 import org.mongoste.model.StatAction;
 import org.mongoste.model.StatBasicCounter;
 import org.mongoste.util.DateUtil;
@@ -42,7 +41,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -53,7 +51,7 @@ import java.util.Properties;
  * MongoDB stats engine implementation
  * @author mrmx
  */
-public class MongoStatsEngine extends  AbstractStatsEngine {
+public class MongoStatsEngine extends AbstractStatsEngine {
     private static Logger log = LoggerFactory.getLogger(MongoStatsEngine.class);
 
     private Mongo mongo;
@@ -166,7 +164,7 @@ public class MongoStatsEngine extends  AbstractStatsEngine {
         String result = getTargetScopeCollectionName(COLLECTION_STATS,now, scope);
         DBCollection sourceTargetCol;
         try {
-            sourceTargetCol = getFullTargetCollection(now, scope);
+            sourceTargetCol = getTargetCollection(now, scope);
             sourceTargetCol.mapReduce(map, red, result, EMPTY_DOC);
         } catch (StatsEngineException ex) {
             log.error("Map reducing",ex);
@@ -347,6 +345,12 @@ public class MongoStatsEngine extends  AbstractStatsEngine {
     }
 
 
+    protected String getTargetScopeCollectionName(String prefix,Date date, TimeScope timeScope) {
+        StatEvent event = new StatEvent();
+        event.setDate(date);
+        return getTargetScopeCollectionName(prefix,event,timeScope);
+    }
+
     protected String getTargetScopeCollectionName(String prefix,StatEvent event, TimeScope timeScope) {
         if(TimeScope.GLOBAL.equals(timeScope) || timeScope == null) {
             return prefix;
@@ -423,7 +427,7 @@ public class MongoStatsEngine extends  AbstractStatsEngine {
             incDoc.put(createDotPath(hourKey ,FIELD_META , metaKey ,metaKeyValue(metaKey, metadata.get(metaKey) )),1);
         }
         doc.put("$inc",incDoc);
-        DBCollection targets = getFullTargetCollection(event,TimeScope.GLOBAL);
+        DBCollection targets = getTargetCollection(event,TimeScope.GLOBAL);
         WriteResult ws = targets.update(q,doc,true,true);
         //log.debug("countRawTarget result: {}",ws.getLastError());
     }
@@ -474,14 +478,16 @@ public class MongoStatsEngine extends  AbstractStatsEngine {
             MongoUtil.dropCollections(db);
         }
         try {
-            log.info("Indexing {} collection",COLLECTION_EVENTS);
-            long t = System.currentTimeMillis();
+            log.info("Indexing {} collection",COLLECTION_EVENTS);            
             events = db.getCollection(COLLECTION_EVENTS);
-            events.ensureIndex(EVENT_CLIENT_ID);
-            events.ensureIndex(EVENT_TARGET);
-            events.ensureIndex(EVENT_TARGET_TYPE);
-            events.ensureIndex(EVENT_DATE);            
-            events.ensureIndex(EVENT_METADATA);
+            long t = System.currentTimeMillis();
+            MongoUtil.createIndexes(events,
+                EVENT_CLIENT_ID,
+                EVENT_TARGET,
+                EVENT_TARGET_TYPE,
+                EVENT_DATE,
+                EVENT_METADATA
+            );
             events.ensureIndex(MongoUtil.createDoc(
                     EVENT_CLIENT_ID,1,
                     EVENT_TARGET,1,
@@ -494,42 +500,51 @@ public class MongoStatsEngine extends  AbstractStatsEngine {
         }catch(MongoException ex) {
             throw new StatsEngineException("creating events indexes", ex);
         }
-        try {
-            log.info("Indexing {} collection",COLLECTION_STATS);
-            long t = System.currentTimeMillis();
-            DBCollection reducedStats = db.getCollection(COLLECTION_STATS);
-            reducedStats.ensureIndex("value.count");
-            reducedStats.ensureIndex("value.unique");
-            log.info("Done indexing {} collection in {}ms",COLLECTION_STATS,System.currentTimeMillis()-t);
-        }catch(MongoException ex) {
-            throw new StatsEngineException("creating indexes "+COLLECTION_STATS, ex);
+    }
+
+    protected DBCollection getStatsCollection(StatEvent event, TimeScope timeScope) throws StatsEngineException {
+        String name = getTargetScopeCollectionName(COLLECTION_STATS, event, timeScope);
+        DBCollection stats = collectionMap.get(name);
+        if(stats == null) {
+            stats = db.getCollection(name);
+            if(stats.count() != 0) {
+                try {
+                    MongoUtil.createIndexes(stats,"value.count","value.unique");
+                }catch(MongoException ex) {
+                    throw new StatsEngineException("creating collection " + name + " indexes", ex);
+                }
+            }
+            collectionMap.put(name, stats);
         }
+        return stats;
     }
 
     protected DBCollection getTargetCollection()  throws StatsEngineException {
-        return getFullTargetCollection((StatEvent)null, TimeScope.GLOBAL);
+        return getTargetCollection((StatEvent)null, TimeScope.GLOBAL);
     }
 
-    protected DBCollection getFullTargetCollection(Date date, TimeScope timeScope) throws StatsEngineException {
+    protected DBCollection getTargetCollection(Date date, TimeScope timeScope) throws StatsEngineException {
         StatEvent event = new StatEvent();
         event.setDate(date);
-        return getFullTargetCollection(event, timeScope);
+        return getTargetCollection(event, timeScope);
     }
 
-    protected DBCollection getFullTargetCollection(StatEvent event, TimeScope timeScope) throws StatsEngineException {
+    protected DBCollection getTargetCollection(StatEvent event, TimeScope timeScope) throws StatsEngineException {
         String name = getTargetScopeCollectionName(COLLECTION_TARGETS, event, timeScope);
         DBCollection target = collectionMap.get(name);
         if(target == null) {
             target = db.getCollection(name);
             try {
-                target.ensureIndex(EVENT_CLIENT_ID);
-                target.ensureIndex(EVENT_TARGET);
-                target.ensureIndex(EVENT_TARGET_TYPE);
-                target.ensureIndex(EVENT_TARGET_OWNERS);
-                target.ensureIndex(EVENT_TARGET_TAGS);
-                target.ensureIndex(EVENT_ACTION);
-                target.ensureIndex(TARGET_YEAR);
-                target.ensureIndex(TARGET_MONTH);
+                MongoUtil.createIndexes(target,
+                    EVENT_CLIENT_ID,
+                    EVENT_TARGET,
+                    EVENT_TARGET_TYPE,
+                    EVENT_TARGET_OWNERS,
+                    EVENT_TARGET_TAGS,
+                    EVENT_ACTION,
+                    TARGET_YEAR,
+                    TARGET_MONTH
+                );
                 target.ensureIndex(MongoUtil.createDoc(
                         EVENT_CLIENT_ID,1,
                         EVENT_TARGET,1,
@@ -556,11 +571,13 @@ public class MongoStatsEngine extends  AbstractStatsEngine {
         if(target == null) {
             target = db.getCollection(name);
             try {
-                target.ensureIndex(EVENT_CLIENT_ID);
-                target.ensureIndex(EVENT_TARGET);
-                target.ensureIndex(EVENT_TARGET_TYPE);                
-                target.ensureIndex(EVENT_TARGET_OWNERS);
-                target.ensureIndex(EVENT_TARGET_TAGS);
+                MongoUtil.createIndexes(target,
+                    EVENT_CLIENT_ID,
+                    EVENT_TARGET,
+                    EVENT_TARGET_TYPE,
+                    EVENT_TARGET_OWNERS,
+                    EVENT_TARGET_TAGS
+                );
                 target.ensureIndex(MongoUtil.createDoc(
                         EVENT_CLIENT_ID,1,
                         EVENT_TARGET,1,
@@ -581,8 +598,7 @@ public class MongoStatsEngine extends  AbstractStatsEngine {
         if(target == null) {
             target = db.getCollection(name);
             try {
-                target.ensureIndex(EVENT_CLIENT_ID);
-                target.ensureIndex(EVENT_ACTION);                
+                MongoUtil.createIndexes(target,EVENT_CLIENT_ID,EVENT_ACTION);
                 target.ensureIndex(MongoUtil.createDoc(
                         EVENT_CLIENT_ID,1,
                         EVENT_ACTION,1
@@ -598,13 +614,6 @@ public class MongoStatsEngine extends  AbstractStatsEngine {
     protected void dropAllCollections() {
         MongoUtil.dropCollections(db);
     }
-
-    private String getTargetScopeCollectionName(String prefix,Date date, TimeScope timeScope) {
-        StatEvent event = new StatEvent();
-        event.setDate(date);
-        return getTargetScopeCollectionName(prefix,event,timeScope);
-    }
-
 
     private void initFunctions() throws StatsEngineException {        
         addFunction(FN_MAPPER_TARGETS+TimeScope.HOURLY.getKey().toUpperCase());
@@ -707,33 +716,4 @@ public class MongoStatsEngine extends  AbstractStatsEngine {
         return resultKey;
     }
 
-
-    private static void buildSamples(StatsEngine statsEngine) throws StatsEngineException {
-        StatEvent event;
-        Calendar cal = DateUtil.getCalendarGMT0();
-        DateUtil.trimTime(cal);
-        cal.set(Calendar.DATE,1);
-        //cal.set(Calendar.MONTH,C);
-        cal.set(Calendar.HOUR_OF_DAY,0);
-        int metaCount = 0;
-        for(int j = 0; j < 4 ; j++) {
-            for(int i = 0; i < 10 ; i++) {
-                event = new StatEvent();
-                event.setClientId("client1");
-                //cal.set(Calendar.HOUR,i);
-                //cal.set(Calendar.HOUR,i % 11);
-                event.setDate(cal.getTime());
-                //event.setDate(DateEx.getDateGMT0());
-                event.setTarget("target"+(1+j%2));
-                event.setAction("view");
-                event.setTargetType("work");
-                //event.getMetadata().put("sessionId", j * 100 + metaCount );
-                event.getMetadata().put("ip", "192.168.1." + ((metaCount) % 10) );
-                statsEngine.handleEvent(event);
-                metaCount = metaCount + (i % 2);
-                cal.add(Calendar.HOUR_OF_DAY,i % 4);
-            }
-            cal.add(Calendar.DATE,1);
-        }
-    }
 }
