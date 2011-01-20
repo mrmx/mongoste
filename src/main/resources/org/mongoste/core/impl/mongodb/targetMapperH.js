@@ -4,6 +4,8 @@ function () {
     k.ida = this._ida;//EVENT_ACTION
     k.idk = this._idk;//EVENT_TARGET_TYPE
     k.idt = this._idt;//EVENT_TARGET
+    k.own = this.own || [];//EVENT_TARGET_OWNERS
+    k.tags = this.tags|| [];//EVENT_TARGET_TAGS
     var metaUnique = "ip";    
     for (var d in this.days) {
         var day = this.days[d];        

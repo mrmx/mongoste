@@ -14,7 +14,7 @@ function () {
             k.date = new Date();
             k.date.setUTCFullYear(this.y);
             k.date.setUTCMonth(this.m-1);
-            k.date.setUTCDate(d);
+            k.date.setUTCDate(1);
             k.date.setUTCHours(0);
             k.date.setUTCMinutes(0);
             k.date.setUTCSeconds(0);
