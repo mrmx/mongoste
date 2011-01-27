@@ -84,9 +84,8 @@ public final class MongoUtil {
         return result;
     }
 
-    public static void close(DBCursor dbc) {
-        //TODO incoming driver version method:
-        //dbc.close();
+    public static void close(DBCursor dbc) {        
+        dbc.close();
     }
 
     public static void createIndexes(DBCollection collection, Object ... indexes) {
