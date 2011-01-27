@@ -29,12 +29,43 @@ public abstract class AbstractStatsEngine implements StatsEngine {
     static final char DOT_CHR                  = '.';
     static final char DOT_CHR_REPLACE          = '_';
 
+    private TimeScope timeScopePrecision;
 
     @Override
     public void setTargetOwners(String clientId, String targetType, String target, List<String> owners) throws StatsEngineException {
         setTargetOwners(clientId, targetType, Arrays.asList(target), owners);
     }
 
+    public void setTimeScopePrecision(String precision) throws StatsEngineException {
+        TimeScope timeScope = null;
+        try {
+            timeScope = TimeScope.valueOf(precision.trim().toUpperCase());
+        }catch(Exception ex) {
+            throw new StatsEngineException("Invalid time scope precision: "+precision, ex);
+        }
+        setTimeScopePrecision(timeScope);
+    }
+
+    @Override
+    public void setTimeScopePrecision(TimeScope precision) throws StatsEngineException {
+        if(precision == null) {
+            throw new IllegalArgumentException("null precision");
+        }
+        List<TimeScope> supported = getSupportedTimeScopePrecision();
+        if(supported == null || supported.isEmpty()) {
+            throw new StatsEngineException("engine has not defined supported precision list");
+        }
+        if(!supported.contains(precision)) {
+            throw new StatsEngineException("Unsupported precision "+precision);
+        }
+        this.timeScopePrecision = precision;
+    }
+
+    @Override
+    public TimeScope getTimeScopePrecision() {
+        return timeScopePrecision;
+    }
+    
     /**
      * Dot notation builder method
      * @param items

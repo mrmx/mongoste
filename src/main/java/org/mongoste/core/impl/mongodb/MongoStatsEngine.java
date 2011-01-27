@@ -96,7 +96,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
 
     protected static final String METAKEY_IP             = "ip";
 
-    
+    protected static final TimeScope DEFAULT_TIMESCOPE_PRECISION = TimeScope.DAILY;
     
     private boolean resetCollections = false; //For testing debug!!!!
     private boolean countEvents = true;
@@ -147,6 +147,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         }
         setKeepEvents(Boolean.valueOf(properties.getProperty("events.keep", "true")));
         setCountEvents(Boolean.valueOf(properties.getProperty("events.count", "true")));
+        setTimeScopePrecision(properties.getProperty("precision", DEFAULT_TIMESCOPE_PRECISION.name()));
         initCollections();
         initFunctions();
     }
@@ -166,6 +167,11 @@ public class MongoStatsEngine extends AbstractStatsEngine {
                 countTargetActions(event);
             } else throw new StatsEngineException("Raw count failed with event "+ event);
         }
+    }
+
+    @Override
+    public List<TimeScope> getSupportedTimeScopePrecision() {
+        return Arrays.asList(TimeScope.MONTHLY,TimeScope.DAILY,TimeScope.HOURLY);
     }
 
     @Override
@@ -286,7 +292,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         DBCursor dbc = null;
         try {
             log.debug("Querying counters");
-            DBCollection counters = getCounterCollection(null, TimeScope.GLOBAL);
+            DBCollection counters = getCounterCollection();
             long t = System.currentTimeMillis();
             dbc = counters.find(query,MongoUtil.createDoc(EVENT_ACTION,1));
             t = System.currentTimeMillis() - t;
@@ -438,15 +444,24 @@ public class MongoStatsEngine extends AbstractStatsEngine {
             //BasicDBObject docSet = new BasicDBObject();
             doc.put("$addToSet", createAddToSetOwnersTagsDoc(event));
             BasicDBObject incDoc = new BasicDBObject();
-            String dayKey = createDotPath(FIELD_DAYS , event.getDay());
-            String hourKey = createDotPath(dayKey ,FIELD_HOURS , event.getHour());
             incDoc.put(FIELD_COUNT, 1); //Month count
-            incDoc.put(createDotPath(dayKey ,FIELD_COUNT),1); //Day count
-            incDoc.put(createDotPath(hourKey,FIELD_COUNT), 1);//Hour count
+            String metaBaseKey = "";
+            TimeScope precision = getTimeScopePrecision();
+            if(precision == TimeScope.DAILY || precision == TimeScope.HOURLY) {
+                String dayKey = createDotPath(FIELD_DAYS , event.getDay());
+                incDoc.put(createDotPath(dayKey ,FIELD_COUNT),1); //Day count
+                if(precision == TimeScope.HOURLY) {
+                    String hourKey = createDotPath(dayKey ,FIELD_HOURS , event.getHour());
+                    incDoc.put(createDotPath(hourKey,FIELD_COUNT), 1);//Hour count
+                    metaBaseKey = hourKey;
+                } else {
+                    metaBaseKey = dayKey;
+                }
+            }            
             //Count metadata
             Map<String,Object> metadata = event.getMetadata();
             for(String metaKey : metadata.keySet()) {
-                incDoc.put(createDotPath(hourKey ,FIELD_META , metaKey ,metaKeyValue(metaKey, metadata.get(metaKey) )),1);
+                incDoc.put(createDotPath(metaBaseKey ,FIELD_META , metaKey ,metaKeyValue(metaKey, metadata.get(metaKey) )),1);
             }
             doc.put("$inc",incDoc);
             DBCollection targets = getTargetCollection(event,TimeScope.GLOBAL);

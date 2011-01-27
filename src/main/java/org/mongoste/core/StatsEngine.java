@@ -29,6 +29,10 @@ import java.util.Properties;
 public interface StatsEngine {
     public void init(Properties properties) throws StatsEngineException;
     public void handleEvent(StatEvent event) throws StatsEngineException;
+    public void setTimeScopePrecision(TimeScope precision) throws StatsEngineException;
+    public TimeScope getTimeScopePrecision();
+    public List<TimeScope> getSupportedTimeScopePrecision();
+
     public void buildStats(TimeScope scope,TimeScope groupBy) throws StatsEngineException;
 
     public List<StatAction> getActions(String clientId) throws StatsEngineException;

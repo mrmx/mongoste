@@ -64,6 +64,11 @@ public class AbstractStatsEngineTest {
         }
 
         @Override
+        public List<TimeScope> getSupportedTimeScopePrecision() {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
         public void handleEvent(StatEvent event) throws StatsEngineException {
             throw new UnsupportedOperationException("Not supported yet.");
         }

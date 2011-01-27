@@ -15,6 +15,7 @@
  */
 package org.mongoste.core.impl.mongodb;
 
+import org.mongoste.core.StatsEngineException;
 import org.mongoste.model.StatEvent;
 import org.mongoste.core.TimeScope;
 import org.mongoste.model.StatAction;
@@ -89,8 +90,9 @@ public class MongoStatsEngineTest {
     }
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         engine.dropAllCollections();
+        engine.setTimeScopePrecision(engine.DEFAULT_TIMESCOPE_PRECISION);
     }
 
     @After
@@ -690,6 +692,7 @@ public class MongoStatsEngineTest {
     public void testBuildStatsMonthly() throws Exception {
         System.out.println("buildStats monthly");
         StatEvent event = engine.createSampleEvent("2011-01-01");
+        engine.setTimeScopePrecision(TimeScope.MONTHLY);
         engine.handleEvent(event);
         event = engine.createSampleEvent("2011-02-01");
         engine.handleEvent(event);
@@ -700,24 +703,4 @@ public class MongoStatsEngineTest {
         assertEquals(2,stats.count());
     }
 
-    /**
-     * Test of getOwnerActionCount method, of class MongoStatsEngine.
-     */
-    @Test
-    public void testGetStatsBetweenMonths() throws Exception {
-        System.out.println("testGetStatsBetweenDates");
-        StatEvent event1 = engine.createSampleEvent("2011-01-01");
-        engine.handleEvent(event1);
-        StatEvent event2 = engine.createSampleEvent("2011-02-01");
-        engine.handleEvent(event2);
-        /*
-        engine.buildStats(TimeScope.GLOBAL,TimeScope.MONTHLY);
-        //Events in two months: 2 docs in stats collection
-        DBCollection stats = engine.getStatsCollection();
-        assertNotNull(stats);
-        assertEquals(2,stats.count());
-         *
-         */
-        fail("todo");
-    }
 }
