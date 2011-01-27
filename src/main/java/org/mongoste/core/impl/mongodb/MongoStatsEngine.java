@@ -178,13 +178,13 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     public void buildStats(TimeScope scope,TimeScope groupBy) {
         TimeScope mapperScope = groupBy;
         if(mapperScope == null) {
-            mapperScope = TimeScope.MONTHLY;
+            mapperScope = getTimeScopePrecision();
         }
         switch (mapperScope)  {
             case GLOBAL:
             case ANNUAL:
             case WEEKLY:            
-                mapperScope = TimeScope.MONTHLY;
+                mapperScope = getTimeScopePrecision();
         }
         String map = getFunction(FN_MAPPER_TARGETS,mapperScope);
         String red = getFunction(FN_REDUCER_TARGETS);
@@ -237,7 +237,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         log.info("getTopTargets for client: {} target type: {} and action: {}",new Object[]{clientId,targetType,action});
         List<StatBasicCounter> result = new ArrayList<StatBasicCounter>();
         try {
-            DBCollection counters = getCounterCollection(null, TimeScope.GLOBAL);
+            DBCollection counters = getCounterCollection();
             DBObject query = MongoUtil.createDoc(EVENT_CLIENT_ID,clientId,EVENT_TARGET_TYPE,targetType);
             String actionCountPath = createDotPath(EVENT_ACTION,action,FIELD_COUNT);
             DBObject order = MongoUtil.createDoc(actionCountPath,-1);

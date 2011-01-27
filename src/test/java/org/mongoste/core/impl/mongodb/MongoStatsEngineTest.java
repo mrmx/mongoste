@@ -57,7 +57,13 @@ public class MongoStatsEngineTest {
             return createSampleEvent(DateUtil.getDateGMT0());
         }
         public StatEvent createSampleEvent(String date) throws ParseException {
-            return createSampleEvent(DateUtil.FORMAT_YY_MM_DD.parse(date));
+            Date parsedDate = null;
+            try {
+                parsedDate = DateUtil.FORMAT_YY_MM_DD_HH.parse(date);
+            }catch(ParseException ex) {
+                parsedDate = DateUtil.FORMAT_YY_MM_DD.parse(date);
+            }
+            return createSampleEvent(parsedDate);
         }
         public StatEvent createSampleEvent(Date date) {
             StatEvent event = new StatEvent();
@@ -698,6 +704,42 @@ public class MongoStatsEngineTest {
         engine.handleEvent(event);
         engine.buildStats(TimeScope.GLOBAL,TimeScope.MONTHLY);
         //Events in two months: 2 docs in stats collection
+        DBCollection stats = engine.getStatsCollection();
+        assertNotNull(stats);
+        assertEquals(2,stats.count());
+    }
+
+    /**
+     * Test of buildStats method, of class MongoStatsEngine.
+     */
+    @Test
+    public void testBuildStatsDaily() throws Exception {
+        System.out.println("buildStats daily");
+        StatEvent event = engine.createSampleEvent("2011-01-01");
+        engine.setTimeScopePrecision(TimeScope.DAILY);
+        engine.handleEvent(event);
+        event = engine.createSampleEvent("2011-01-02");
+        engine.handleEvent(event);
+        engine.buildStats(TimeScope.GLOBAL,TimeScope.DAILY);
+        //Events in two days: 2 docs in stats collection
+        DBCollection stats = engine.getStatsCollection();
+        assertNotNull(stats);
+        assertEquals(2,stats.count());
+    }
+
+    /**
+     * Test of buildStats method, of class MongoStatsEngine.
+     */
+    @Test
+    public void testBuildStatsHourly() throws Exception {
+        System.out.println("buildStats hourly");
+        StatEvent event = engine.createSampleEvent("2011-01-01 01");
+        engine.setTimeScopePrecision(TimeScope.HOURLY);
+        engine.handleEvent(event);
+        event = engine.createSampleEvent("2011-01-01 02");
+        engine.handleEvent(event);
+        engine.buildStats(TimeScope.GLOBAL,TimeScope.HOURLY);
+        //Events in two hours: 2 docs in stats collection
         DBCollection stats = engine.getStatsCollection();
         assertNotNull(stats);
         assertEquals(2,stats.count());
