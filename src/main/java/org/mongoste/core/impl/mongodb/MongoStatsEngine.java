@@ -20,7 +20,7 @@ import org.mongoste.core.StatsEngineException;
 import org.mongoste.core.TimeScope;
 import org.mongoste.model.StatEvent;
 import org.mongoste.model.StatAction;
-import org.mongoste.model.StatBasicCounter;
+import org.mongoste.model.StatCounter;
 import org.mongoste.util.DateUtil;
 
 import com.mongodb.BasicDBObject;
@@ -46,6 +46,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import org.mongoste.query.Query;
+import org.mongoste.query.QueryField;
+import org.mongoste.query.QueryFilter;
 
 /**
  * MongoDB stats engine implementation
@@ -201,12 +204,19 @@ public class MongoStatsEngine extends AbstractStatsEngine {
 
 
     @Override
-    public List<StatAction> getActions(String clientId) throws StatsEngineException {
+    public List<StatAction> getActions(Query query) throws StatsEngineException {
         List<StatAction> actions = new ArrayList<StatAction>();
         try {
             DBCollection targetActions = getTargetActionsCollection();
-            DBObject query = MongoUtil.createDoc(EVENT_CLIENT_ID,clientId);
-            DBCursor dbc = targetActions.find(query,MongoUtil.createDoc(EVENT_ACTION,1,FIELD_TOTAL,1,ACTION_TARGET,1));
+            DBObject queryDoc = EMPTY_DOC;
+            QueryFilter filter = query.getFilter(QueryField.CLIENT_ID);
+            if(filter != null && !filter.isEmpty())  {
+                queryDoc = MongoUtil.createDoc(EVENT_CLIENT_ID,filter.getValue());
+            }
+            DBCursor dbc = targetActions.find(queryDoc,MongoUtil.createDoc(EVENT_ACTION,1,FIELD_TOTAL,1,ACTION_TARGET,1));
+            if(query.getMaxResults() != null) {
+                dbc.limit(query.getMaxResults());
+            }
             DBObject resultAction,resultTargets,resultTarget;
             String actionName;
             Long count;
@@ -222,7 +232,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
                 for(String targetName : resultTargets.keySet()) {
                     resultTarget = (DBObject) resultTargets.get(targetName);
                     count = ((Number)resultTarget.get(FIELD_COUNT)).longValue();
-                    action.getTargets().add(new StatBasicCounter(targetName, count));
+                    action.getTargets().add(new StatCounter(targetName, count));
                 }
             }
         }catch(Exception ex) {
@@ -233,9 +243,9 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     }
 
     @Override
-    public List<StatBasicCounter> getTopTargets(String clientId,String targetType,String action,Integer limit) throws StatsEngineException {
+    public List<StatCounter> getTopTargets(String clientId,String targetType,String action,Integer limit) throws StatsEngineException {
         log.info("getTopTargets for client: {} target type: {} and action: {}",new Object[]{clientId,targetType,action});
-        List<StatBasicCounter> result = new ArrayList<StatBasicCounter>();
+        List<StatCounter> result = new ArrayList<StatCounter>();
         try {
             DBCollection counters = getCounterCollection();
             DBObject query = MongoUtil.createDoc(EVENT_CLIENT_ID,clientId,EVENT_TARGET_TYPE,targetType);
@@ -253,7 +263,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
                 counter = (BasicDBObject) dbc.next();
                 target = String.valueOf(counter.get(EVENT_TARGET));
                 count = MongoUtil.getChildDBObject(counter,actionCountPath,2).getLong(FIELD_COUNT);
-                result.add(new StatBasicCounter(target, count));
+                result.add(new StatCounter(target, count));
             }
         }catch(Exception ex) {
             log.error("getTopTargets",ex);
@@ -286,6 +296,18 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         }
         return getActionCount(query);
     }
+
+    /*
+    public List<StatCounter> getTargetStats(String clientId,String targetType,List<String> targets) throws StatsEngineException {
+        log.info("getTargetStats for client: {} target type: {}",clientId,targetType);
+        DBObject query = MongoUtil.createDoc(
+            EVENT_CLIENT_ID,clientId,
+            EVENT_TARGET_TYPE,targetType,
+            EVENT_TARGET,new BasicDBObject("$in",targets)
+        );
+        return getActionCount(query);
+    }*/
+
 
     private Map<String,Long> getActionCount(DBObject query) throws StatsEngineException {
         Map<String,Long> result = new HashMap<String, Long>();

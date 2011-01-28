@@ -15,18 +15,27 @@
  */
 package org.mongoste.model;
 
+import java.util.Date;
+
 /**
- * A stat basic counter
+ * A stat counter
  * @author mrmx
  */
-public class StatBasicCounter {
+public class StatCounter {
     private String name;
     private long count;
+    private Date date;
 
-    public StatBasicCounter(String name, long count) {
+    public StatCounter(String name, long count) {
+        this(name,count,null);
+    }
+
+    public StatCounter(String name, long count, Date date) {
         this.name = name;
         this.count = count;
+        this.date = date;
     }
+
 
     /**
      * @return the name
@@ -54,6 +63,20 @@ public class StatBasicCounter {
      */
     public void setCount(long count) {
         this.count = count;
+    }
+
+    /**
+     * @return the date
+     */
+    public Date getDate() {
+        return date;
+    }
+
+    /**
+     * @param date the date to set
+     */
+    public void setDate(Date date) {
+        this.date = date;
     }
 
     @Override

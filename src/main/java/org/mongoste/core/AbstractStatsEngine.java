@@ -19,6 +19,8 @@ import org.apache.commons.lang.StringUtils;
 
 import java.util.Arrays;
 import java.util.List;
+import org.mongoste.query.DefaultQuery;
+import org.mongoste.query.Query;
 
 /**
  * Base class for all engines
@@ -30,6 +32,12 @@ public abstract class AbstractStatsEngine implements StatsEngine {
     static final char DOT_CHR_REPLACE          = '_';
 
     private TimeScope timeScopePrecision;
+
+    @Override
+    public Query createQuery() {
+        return new DefaultQuery(this);
+    }
+
 
     @Override
     public void setTargetOwners(String clientId, String targetType, String target, List<String> owners) throws StatsEngineException {

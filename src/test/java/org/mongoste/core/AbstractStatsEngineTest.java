@@ -16,7 +16,7 @@
 package org.mongoste.core;
 
 import org.mongoste.model.StatAction;
-import org.mongoste.model.StatBasicCounter;
+import org.mongoste.model.StatCounter;
 import org.mongoste.model.StatEvent;
 
 import org.junit.Before;
@@ -26,6 +26,7 @@ import static org.junit.Assert.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import org.mongoste.query.Query;
 
 /**
  *
@@ -79,12 +80,12 @@ public class AbstractStatsEngineTest {
         }
 
         @Override
-        public List<StatAction> getActions(String clientId) throws StatsEngineException {
+        public List<StatAction> getActions(Query query) throws StatsEngineException {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 
         @Override
-        public List<StatBasicCounter> getTopTargets(String clientId, String targetType, String action, Integer limit) throws StatsEngineException {
+        public List<StatCounter> getTopTargets(String clientId, String targetType, String action, Integer limit) throws StatsEngineException {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 

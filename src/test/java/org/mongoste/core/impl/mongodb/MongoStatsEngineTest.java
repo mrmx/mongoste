@@ -15,11 +15,11 @@
  */
 package org.mongoste.core.impl.mongodb;
 
-import org.mongoste.core.StatsEngineException;
+import org.mongoste.query.QueryField;
 import org.mongoste.model.StatEvent;
 import org.mongoste.core.TimeScope;
 import org.mongoste.model.StatAction;
-import org.mongoste.model.StatBasicCounter;
+import org.mongoste.model.StatCounter;
 import org.mongoste.util.DateUtil;
 
 import com.mongodb.BasicDBList;
@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.text.ParseException;
+import org.mongoste.query.Query;
 
 /**
  * MongoStatsEngine Test
@@ -123,7 +124,8 @@ public class MongoStatsEngineTest {
         StatEvent event = engine.createSampleEvent();
         engine.handleEvent(event);
         engine.handleEvent(event);
-        List<StatAction> result = engine.getActions(event.getClientId());
+        Query query = engine.createQuery().filterBy(QueryField.CLIENT_ID,event.getClientId());
+        List<StatAction> result = query.getActions();
         assertNotNull(result);
         assertEquals(1, result.size());
         StatAction action = result.get(0);
@@ -131,7 +133,7 @@ public class MongoStatsEngineTest {
         assertEquals(event.getAction(), action.getName());
         assertEquals(2, action.getCount());
         assertEquals(1, action.getTargets().size());
-        StatBasicCounter actionTarget = action.getTargets().get(0);
+        StatCounter actionTarget = action.getTargets().get(0);
         assertEquals(event.getTargetType(), actionTarget.getName());
         assertEquals(2, actionTarget.getCount());
     }
@@ -222,11 +224,11 @@ public class MongoStatsEngineTest {
         System.out.println("getTopTargets");
         StatEvent event = engine.createSampleEvent();
         engine.handleEvent(event);
-        List<StatBasicCounter> result = engine.getTopTargets(event.getClientId(), event.getTargetType(), event.getAction(), null);
+        List<StatCounter> result = engine.getTopTargets(event.getClientId(), event.getTargetType(), event.getAction(), null);
         assertNotNull(result);
         assertEquals(1, result.size());
         System.out.println("result:"+result);
-        StatBasicCounter counter = result.get(0);
+        StatCounter counter = result.get(0);
         assertEquals(event.getTarget(), counter.getName());
         assertEquals(1, counter.getCount());
     }
@@ -575,7 +577,8 @@ public class MongoStatsEngineTest {
     public void testTargetCollection() throws Exception {
         System.out.println("testTargetCollection");
         Calendar cal = DateUtil.trimTime(DateUtil.getCalendarGMT0());
-        //cal.set(Calendar.MONTH, Calendar.JANUARY);
+        cal.set(Calendar.MONTH, Calendar.JANUARY);
+        cal.set(Calendar.DATE, 1);
         System.out.println("2 events for "+cal.getTime());
         StatEvent event = engine.createSampleEvent();
         event.setDate(cal.getTime());
@@ -583,12 +586,13 @@ public class MongoStatsEngineTest {
         cal.add(Calendar.HOUR_OF_DAY,1);
         event.setDate(cal.getTime());
         engine.handleEvent(event);
+        //Next month
         cal.add(Calendar.MONTH,1);
         System.out.println("1 event for "+cal.getTime());
         event.setDate(cal.getTime());        
         engine.handleEvent(event);
         //Events in two months: 2 docs in target collection
-        DBCollection targets = engine.getTargetCollection((StatEvent)null, TimeScope.GLOBAL);
+        DBCollection targets = engine.getTargetCollection();
         assertNotNull(targets);
         assertEquals(2,targets.count());
         //Add 3th event in second month: still 2 docs in target collection
@@ -596,7 +600,7 @@ public class MongoStatsEngineTest {
         System.out.println("1 event for "+cal.getTime());
         event.setDate(cal.getTime());
         engine.handleEvent(event);
-        targets = engine.getTargetCollection((StatEvent)null, TimeScope.GLOBAL);
+        targets = engine.getTargetCollection();
         assertNotNull(targets);
         assertEquals(2,targets.count());
         DBCursor dbc = targets.find();

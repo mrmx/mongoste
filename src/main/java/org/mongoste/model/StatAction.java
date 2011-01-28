@@ -16,26 +16,31 @@
 package org.mongoste.model;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
  * Represents a stat action counter
  * @author mrmx
  */
-public class StatAction extends StatBasicCounter {
+public class StatAction extends StatCounter {
     private String name;
     private long count;
-    private List<StatBasicCounter> targets;
+    private List<StatCounter> targets;
 
     public StatAction(String name, long count) {
-        super(name,count);
-        this.targets = new ArrayList<StatBasicCounter>();
+        this(name,count,null);
+    }
+
+    public StatAction(String name, long count, Date date) {
+        super(name,count,date);
+        this.targets = new ArrayList<StatCounter>();
     }
 
     /**
      * @return the targets
      */
-    public List<StatBasicCounter> getTargets() {
+    public List<StatCounter> getTargets() {
         return targets;
     }
 
