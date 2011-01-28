@@ -247,11 +247,14 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         List<StatCounter> result = new ArrayList<StatCounter>();
         try {
             DBCollection counters = getCounterCollection();
-            String clientId = query.getFilter(QueryField.CLIENT_ID).getValue().toString();
-            String targetType = query.getFilter(QueryField.TARGET_TYPE).getValue().toString();
-            String action = query.getFilter(QueryField.ACTION).getValue().toString();
-            DBObject queryDoc = MongoUtil.createDoc(EVENT_CLIENT_ID,clientId,EVENT_TARGET_TYPE,targetType);
-            String actionCountPath = createDotPath(EVENT_ACTION,action,FIELD_COUNT);
+            DBObject queryDoc = MongoUtil.createDoc(
+                    EVENT_CLIENT_ID , query.getFilter(QueryField.CLIENT_ID).getValue() ,
+                    EVENT_TARGET_TYPE,query.getFilter(QueryField.TARGET_TYPE).getValue()
+            );
+            String actionCountPath = createDotPath(
+                    EVENT_ACTION , query.getFilter(QueryField.ACTION).getValue() ,
+                    FIELD_COUNT
+            );
             DBObject order = MongoUtil.createDoc(actionCountPath,getQueryOrder(query));
             log.debug("Ensuring index for {}",order);
             counters.ensureIndex(order);
