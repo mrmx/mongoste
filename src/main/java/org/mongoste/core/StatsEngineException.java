@@ -19,7 +19,7 @@ package org.mongoste.core;
  * Core stats engine exception
  * @author mrmx
  */
-public class StatsEngineException extends Exception {
+public class StatsEngineException extends RuntimeException {
 
     public StatsEngineException() {
     }
