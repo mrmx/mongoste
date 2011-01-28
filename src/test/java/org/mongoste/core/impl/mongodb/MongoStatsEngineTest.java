@@ -671,11 +671,20 @@ public class MongoStatsEngineTest {
         System.out.println("getMultiTargetActionCount");
         StatEvent event = engine.createSampleEvent();
         engine.handleEvent(event);
-        List<String> targets = Arrays.asList(event.getTarget());
-        Map result = engine.getMultiTargetActionCount(event.getClientId(), event.getTargetType(), targets);
+        
+        Query query = engine.createQuery();
+        query.filterBy(QueryField.CLIENT_ID, event.getClientId());
+        query.filterBy(QueryField.TARGET_TYPE, event.getTargetType());
+        query.filterBy(QueryField.TARGET, event.getTarget());
+        Map result = query.getMultiTargetActionCount();
         assertNotNull(result);
         assertEquals(1,result.size());
         System.out.println("result:"+result);
+        //TODO check collection
+        List<String> targets = Arrays.asList(event.getTarget());
+        //query.filterBy(QueryField.TARGET,QueryOp.IN,targets)
+        //query.filterBy(QueryField.TARGET).in(targets) 
+
     }
 
     /**

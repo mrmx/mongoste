@@ -21,6 +21,7 @@ import org.mongoste.model.StatCounter;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Query interface
@@ -92,5 +93,12 @@ public interface Query extends Serializable {
      * @see StatCounter
      */
     List<StatCounter> getTopTargets() throws StatsEngineException;
+
+    /**
+     * Returns the action counters of given target/s
+     * @return a map of action->count
+     * @throws StatsEngineException
+     */
+    Map<String, Long> getMultiTargetActionCount() throws StatsEngineException;
 
 }

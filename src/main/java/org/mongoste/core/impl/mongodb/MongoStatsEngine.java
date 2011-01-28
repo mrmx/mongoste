@@ -248,11 +248,11 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         try {
             DBCollection counters = getCounterCollection();
             DBObject queryDoc = MongoUtil.createDoc(
-                    EVENT_CLIENT_ID , query.getFilter(QueryField.CLIENT_ID).getValue() ,
-                    EVENT_TARGET_TYPE,query.getFilter(QueryField.TARGET_TYPE).getValue()
+                    EVENT_CLIENT_ID , getQueryValue(query,QueryField.CLIENT_ID),
+                    EVENT_TARGET_TYPE,getQueryValue(query,QueryField.TARGET_TYPE)
             );
             String actionCountPath = createDotPath(
-                    EVENT_ACTION , query.getFilter(QueryField.ACTION).getValue() ,
+                    EVENT_ACTION , getQueryValue(query,QueryField.ACTION),
                     FIELD_COUNT
             );
             DBObject order = MongoUtil.createDoc(actionCountPath,getQueryOrder(query));
@@ -279,14 +279,13 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     }
 
     @Override
-    public Map<String,Long> getMultiTargetActionCount(String clientId,String targetType,List<String> targets) throws StatsEngineException {
-        log.info("getMultiTargetActionCount for client: {} target type: {}",clientId,targetType);
-        DBObject query = MongoUtil.createDoc(
-            EVENT_CLIENT_ID,clientId,
-            EVENT_TARGET_TYPE,targetType,
-            EVENT_TARGET,new BasicDBObject("$in",targets)
+    public Map<String,Long> getMultiTargetActionCount(Query query) throws StatsEngineException {
+        DBObject queryDoc = MongoUtil.createDoc(
+            EVENT_CLIENT_ID , getQueryValue(query,QueryField.CLIENT_ID),
+            EVENT_TARGET_TYPE,getQueryValue(query,QueryField.TARGET_TYPE),
+            EVENT_TARGET,     getQueryValue(query,QueryField.TARGET)//new BasicDBObject("$in",targets)
         );
-        return getActionCount(query);
+        return getActionCount(queryDoc);
     }
 
     @Override
@@ -688,6 +687,22 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     protected int getQueryOrder(Query query) {
         return query.isOrderAscending() ? 1 : -1;
     }
+
+    protected Object getQueryValue(Query query,QueryField field) {
+        Object value = null;
+        QueryFilter filter = query.getFilter(field);
+        switch(filter.getOperation()) {
+            case IN:
+                value = new BasicDBObject("$in",filter.getValue());
+                break;
+            case EQ:
+            default:
+                value = filter.isEmpty() ? "" : filter.getValue();
+                break;
+        }
+        return value;
+    }
+
 
     protected void dropAllCollections() {
         MongoUtil.dropCollections(db);

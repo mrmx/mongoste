@@ -136,7 +136,6 @@ public class DefaultQuery implements Query {
     public List<StatAction> getActions() throws StatsEngineException {
         return statsEngine.getActions(this);
     }
-
     
     /**
      * Returns the top targets for a client, target type and action
@@ -146,9 +145,22 @@ public class DefaultQuery implements Query {
      */
     public List<StatCounter> getTopTargets() throws StatsEngineException {
         assertNotEmpty(CLIENT_ID,TARGET_TYPE,ACTION);
-        log.info("getTopTargets query {}",this);
+        log.debug("getTopTargets query {}",this);
         return statsEngine.getTopTargets(this);
     }
+
+    
+    /**
+     * Returns the action counters of given target/s
+     * @return a map of action->count
+     * @throws StatsEngineException
+     */
+    public Map<String,Long> getMultiTargetActionCount() throws StatsEngineException {
+        assertNotEmpty(CLIENT_ID,TARGET_TYPE,TARGET);
+        log.debug("getMultiTargetActionCount query {}",this);
+        return statsEngine.getMultiTargetActionCount(this);
+    }
+
 
     /**
      * Checks if the provided fields has non-empty filters associated
