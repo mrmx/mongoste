@@ -17,6 +17,7 @@ package org.mongoste.query;
 
 import org.mongoste.core.StatsEngineException;
 import org.mongoste.model.StatAction;
+import org.mongoste.model.StatCounter;
 
 import java.io.Serializable;
 import java.util.List;
@@ -26,6 +27,21 @@ import java.util.List;
  * @author mrmx
  */
 public interface Query extends Serializable {
+
+    /**
+     * Gets the ascending order
+     * @return <code>true</code> if the order is ascending <code>false</>
+     * if order is descending
+     */
+    boolean isOrderAscending();
+
+    /**
+     * Set the global asc/descending order
+     * @param orderAscending <code>true</code> to ascending order, <code>false</>
+     * for descending order
+     * @return This query
+     */
+    Query order(boolean orderAscending);
 
     /**
      * @return the maxResults
@@ -68,5 +84,13 @@ public interface Query extends Serializable {
      * @return list of total performed actions
      */
     List<StatAction> getActions() throws StatsEngineException;
+
+    /**
+     * Returns the top targets for a client, target type and action
+     * @return list of <code>StatCounter</code> values
+     * @throws StatsEngineException
+     * @see StatCounter
+     */
+    List<StatCounter> getTopTargets() throws StatsEngineException;
 
 }

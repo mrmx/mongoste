@@ -85,7 +85,7 @@ public class AbstractStatsEngineTest {
         }
 
         @Override
-        public List<StatCounter> getTopTargets(String clientId, String targetType, String action, Integer limit) throws StatsEngineException {
+        public List<StatCounter> getTopTargets(Query query) throws StatsEngineException {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 

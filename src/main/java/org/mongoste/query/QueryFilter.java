@@ -81,4 +81,13 @@ public class QueryFilter {
         return false;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder(getClass().getSimpleName());
+        sb.append("[");
+        sb.append(operation).append(" ").append(value);
+        sb.append("]");
+        return sb.toString();
+    }
+
 }

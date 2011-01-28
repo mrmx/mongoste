@@ -18,6 +18,11 @@ package org.mongoste.query;
 import org.mongoste.core.StatsEngine;
 import org.mongoste.core.StatsEngineException;
 import org.mongoste.model.StatAction;
+import org.mongoste.model.StatCounter;
+import static org.mongoste.query.QueryField.*;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
@@ -30,9 +35,12 @@ import java.util.EnumMap;
  * @author mrmx
  */
 public class DefaultQuery implements Query {
+    private static Logger log = LoggerFactory.getLogger(DefaultQuery.class);
+
     private StatsEngine statsEngine;
     private Integer maxResults;
     private Map<QueryField,QueryFilter> filterByMap;
+    private boolean orderAscending;
 
     /**
      *
@@ -40,6 +48,28 @@ public class DefaultQuery implements Query {
      */
     public DefaultQuery(StatsEngine statsEngine) {
         this.statsEngine = statsEngine;
+    }
+
+    /**
+     * Gets the ascending order
+     * @return <code>true</code> if the order is ascending <code>false</>
+     * if order is descending
+     */
+    @Override
+    public boolean isOrderAscending() {
+        return orderAscending;
+    }
+
+    /**
+     * Set the global asc/descending order
+     * @param orderAscending <code>true</code> to ascending order, <code>false</>
+     * for descending order
+     * @return This query
+     */
+    @Override
+    public Query order(boolean orderAscending) {
+        this.orderAscending = orderAscending;
+        return this;
     }
 
     /**
@@ -107,6 +137,33 @@ public class DefaultQuery implements Query {
         return statsEngine.getActions(this);
     }
 
+    
+    /**
+     * Returns the top targets for a client, target type and action
+     * @return list of <code>StatCounter</code> values
+     * @throws StatsEngineException
+     * @see StatCounter
+     */
+    public List<StatCounter> getTopTargets() throws StatsEngineException {
+        assertNotEmpty(CLIENT_ID,TARGET_TYPE,ACTION);
+        log.info("getTopTargets query {}",this);
+        return statsEngine.getTopTargets(this);
+    }
+
+    /**
+     * Checks if the provided fields has non-empty filters associated
+     * @param fields Fields to check
+     * @throws RequiredQueryFieldException if field has no filter or filter is empty
+     */
+    protected void assertNotEmpty(QueryField ... fields) throws RequiredQueryFieldException {
+        QueryFilter filter;
+        for(QueryField field : fields) {
+            filter = getFilterByMap().get(field);
+            if(filter == null || filter.isEmpty()) {
+                throw new RequiredQueryFieldException(field);
+            }
+        }
+    }
 
     /**
      * Gets the filterBy map
@@ -121,6 +178,15 @@ public class DefaultQuery implements Query {
             }
         }
         return filterByMap;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder(getClass().getSimpleName());
+        sb.append("[");
+        sb.append("filterBy:").append(getFilterByMap());
+        sb.append("]");
+        return sb.toString();
     }
 
 }

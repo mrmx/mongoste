@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.text.ParseException;
 import org.mongoste.query.Query;
+import org.mongoste.query.RequiredQueryFieldException;
 
 /**
  * MongoStatsEngine Test
@@ -224,7 +225,30 @@ public class MongoStatsEngineTest {
         System.out.println("getTopTargets");
         StatEvent event = engine.createSampleEvent();
         engine.handleEvent(event);
-        List<StatCounter> result = engine.getTopTargets(event.getClientId(), event.getTargetType(), event.getAction(), null);
+        List<StatCounter> result = null;
+        Query query = engine.createQuery();
+        try {
+            result = query.getTopTargets();
+            fail("Required field");
+        }catch(RequiredQueryFieldException ex){
+
+        }
+        query.filterBy(QueryField.CLIENT_ID, event.getClientId());
+        try {
+            result = query.getTopTargets();
+            fail("Required field");
+        }catch(RequiredQueryFieldException ex){
+
+        }
+        query.filterBy(QueryField.TARGET_TYPE, event.getTargetType());
+        try {
+            result = query.getTopTargets();
+            fail("Required field");
+        }catch(RequiredQueryFieldException ex){
+
+        }
+        query.filterBy(QueryField.ACTION, event.getAction());
+        result = query.getTopTargets();
         assertNotNull(result);
         assertEquals(1, result.size());
         System.out.println("result:"+result);

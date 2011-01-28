@@ -39,7 +39,7 @@ public interface StatsEngine {
     public void buildStats(TimeScope scope,TimeScope groupBy) throws StatsEngineException;
 
     public List<StatAction> getActions(Query query) throws StatsEngineException;
-    public List<StatCounter> getTopTargets(String clientId,String targetType,String action,Integer limit) throws StatsEngineException;
+    public List<StatCounter> getTopTargets(Query query) throws StatsEngineException;
     public Map<String,Long> getMultiTargetActionCount(String clientId,String targetType,List<String> targets) throws StatsEngineException;
     public Map<String,Long> getOwnerActionCount(String clientId,String targetType,String owner,String... tags) throws StatsEngineException;
 

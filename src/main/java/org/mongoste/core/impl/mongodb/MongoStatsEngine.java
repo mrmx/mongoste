@@ -243,18 +243,21 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     }
 
     @Override
-    public List<StatCounter> getTopTargets(String clientId,String targetType,String action,Integer limit) throws StatsEngineException {
-        log.info("getTopTargets for client: {} target type: {} and action: {}",new Object[]{clientId,targetType,action});
+    public List<StatCounter> getTopTargets(Query query) throws StatsEngineException {
         List<StatCounter> result = new ArrayList<StatCounter>();
         try {
             DBCollection counters = getCounterCollection();
-            DBObject query = MongoUtil.createDoc(EVENT_CLIENT_ID,clientId,EVENT_TARGET_TYPE,targetType);
+            String clientId = query.getFilter(QueryField.CLIENT_ID).getValue().toString();
+            String targetType = query.getFilter(QueryField.TARGET_TYPE).getValue().toString();
+            String action = query.getFilter(QueryField.ACTION).getValue().toString();
+            DBObject queryDoc = MongoUtil.createDoc(EVENT_CLIENT_ID,clientId,EVENT_TARGET_TYPE,targetType);
             String actionCountPath = createDotPath(EVENT_ACTION,action,FIELD_COUNT);
-            DBObject order = MongoUtil.createDoc(actionCountPath,-1);
+            DBObject order = MongoUtil.createDoc(actionCountPath,getQueryOrder(query));
             log.debug("Ensuring index for {}",order);
             counters.ensureIndex(order);
             log.debug("Querying counters");
-            DBCursor dbc = counters.find(query,MongoUtil.createDoc(EVENT_TARGET,1,EVENT_ACTION,1));
+            DBCursor dbc = counters.find(queryDoc,MongoUtil.createDoc(EVENT_TARGET,1,EVENT_ACTION,1));
+            Integer limit = query.getMaxResults();
             dbc = dbc.sort(order).limit(limit == null ? 10 : limit);
             BasicDBObject counter;
             String target;
@@ -677,6 +680,10 @@ public class MongoStatsEngine extends AbstractStatsEngine {
             collectionMap.put(name, target);
         }
         return target;
+    }
+
+    protected int getQueryOrder(Query query) {
+        return query.isOrderAscending() ? 1 : -1;
     }
 
     protected void dropAllCollections() {
