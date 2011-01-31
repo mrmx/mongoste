@@ -79,6 +79,14 @@ public class StatCounter {
         this.date = date;
     }
 
+    /**
+     * @param count the count to add
+     */
+    public void add(long count) {
+        this.count += count;
+    }
+
+
     @Override
     public String toString() {
         return getClass().getSimpleName()+"["+getName()+":"+getCount()+"]";
