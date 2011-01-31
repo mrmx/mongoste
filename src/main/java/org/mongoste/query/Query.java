@@ -108,7 +108,7 @@ public interface Query extends Serializable {
      * @return a map of action->count
      * @throws StatsEngineException
      */
-    Map<String, Long> getMultiTargetActionCount() throws StatsEngineException;
+    Map<String, Long> getTargetActionCount() throws StatsEngineException;
 
     /**
      * Returns the action counters of given target owner/s

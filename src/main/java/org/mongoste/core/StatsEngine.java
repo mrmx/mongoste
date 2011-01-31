@@ -40,7 +40,7 @@ public interface StatsEngine {
 
     public List<StatAction> getActions(Query query) throws StatsEngineException;
     public List<StatCounter> getTopTargets(Query query) throws StatsEngineException;
-    public Map<String,Long> getMultiTargetActionCount(Query query) throws StatsEngineException;
+    public Map<String,Long> getTargetActionCount(Query query) throws StatsEngineException;
     public Map<String,Long> getOwnerActionCount(Query query) throws StatsEngineException;
 
     public void setTargetOwners(String clientId,String targetType,String target,List<String> owners) throws StatsEngineException;

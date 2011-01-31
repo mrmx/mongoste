@@ -90,7 +90,7 @@ public class AbstractStatsEngineTest {
         }
 
         @Override
-        public Map<String, Long> getMultiTargetActionCount(Query query) throws StatsEngineException {
+        public Map<String, Long> getTargetActionCount(Query query) throws StatsEngineException {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 

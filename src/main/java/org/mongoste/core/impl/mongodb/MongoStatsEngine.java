@@ -279,11 +279,11 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     }
 
     @Override
-    public Map<String,Long> getMultiTargetActionCount(Query query) throws StatsEngineException {
+    public Map<String,Long> getTargetActionCount(Query query) throws StatsEngineException {
         DBObject queryDoc = MongoUtil.createDoc(
             EVENT_CLIENT_ID , getQueryValue(query,QueryField.CLIENT_ID),
             EVENT_TARGET_TYPE,getQueryValue(query,QueryField.TARGET_TYPE),
-            EVENT_TARGET,     getQueryValue(query,QueryField.TARGET)//new BasicDBObject("$in",targets)
+            EVENT_TARGET,     getQueryValue(query,QueryField.TARGET)
         );
         return getActionCount(queryDoc);
     }
@@ -303,8 +303,8 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     }
 
     /*
-    public List<StatCounter> getTargetStats(String clientId,String targetType,List<String> targets) throws StatsEngineException {
-        log.info("getTargetStats for client: {} target type: {}",clientId,targetType);
+    public List<StatCounter> getTargetStats(Query query) throws StatsEngineException {
+        
         DBObject query = MongoUtil.createDoc(
             EVENT_CLIENT_ID,clientId,
             EVENT_TARGET_TYPE,targetType,

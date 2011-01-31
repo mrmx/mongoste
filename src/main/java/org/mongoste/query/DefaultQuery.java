@@ -170,10 +170,10 @@ public class DefaultQuery implements Query {
      * @throws StatsEngineException
      */
     @Override
-    public Map<String,Long> getMultiTargetActionCount() throws StatsEngineException {
+    public Map<String,Long> getTargetActionCount() throws StatsEngineException {
         assertNotEmpty(CLIENT_ID,TARGET_TYPE,TARGET);
         log.debug("getMultiTargetActionCount query {}",this);
-        return statsEngine.getMultiTargetActionCount(this);
+        return statsEngine.getTargetActionCount(this);
     }
 
     /**
