@@ -16,7 +16,7 @@
 package org.mongoste.query;
 
 /**
- * Available query fields enumeration
+ * Available query fields
  *
  * @author mrmx
  */
@@ -25,5 +25,7 @@ public enum QueryField {
     ACTION,
     TARGET,
     TARGET_TYPE,
+    TARGET_OWNER,
+    TARGET_TAGS,
     DATE_FROM,DATE_TO
 }

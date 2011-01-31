@@ -289,17 +289,17 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     }
 
     @Override
-    public Map<String,Long> getOwnerActionCount(String clientId,String targetType,String owner,String... tags) throws StatsEngineException {
-        log.info("getOwnerActionCount for client: {} target type: {} owner: {}",new Object[]{clientId,targetType,owner});
-        DBObject query = MongoUtil.createDoc(
-            EVENT_CLIENT_ID,clientId,
-            EVENT_TARGET_TYPE,targetType,
-            EVENT_TARGET_OWNERS,owner
+    public Map<String,Long> getOwnerActionCount(Query query) throws StatsEngineException {
+        DBObject queryDoc = MongoUtil.createDoc(
+            EVENT_CLIENT_ID , getQueryValue(query,QueryField.CLIENT_ID),
+            EVENT_TARGET_TYPE,getQueryValue(query,QueryField.TARGET_TYPE),
+            EVENT_TARGET_OWNERS,getQueryValue(query,QueryField.TARGET_OWNER)
         );
+        Object tags = getQueryValue(query,QueryField.TARGET_TAGS);
         if(tags != null){
-            putSingleInDoc(query, EVENT_TARGET_TAGS, Arrays.asList(tags));
+            queryDoc.put(EVENT_TARGET_TAGS, tags);
         }
-        return getActionCount(query);
+        return getActionCount(queryDoc);
     }
 
     /*
@@ -691,14 +691,16 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     protected Object getQueryValue(Query query,QueryField field) {
         Object value = null;
         QueryFilter filter = query.getFilter(field);
-        switch(filter.getOperation()) {
-            case IN:
-                value = new BasicDBObject("$in",filter.getValue());
-                break;
-            case EQ:
-            default:
-                value = filter.isEmpty() ? "" : filter.getValue();
-                break;
+        if(filter != null) {
+            switch(filter.getOperation()) {
+                case IN:
+                    value = new BasicDBObject("$in",filter.getValue());
+                    break;
+                case EQ:
+                default:
+                    value = filter.isEmpty() ? "" : filter.getValue();
+                    break;
+            }
         }
         return value;
     }

@@ -95,7 +95,7 @@ public class AbstractStatsEngineTest {
         }
 
         @Override
-        public Map<String, Long> getOwnerActionCount(String clientId, String targetType, String owner, String... tags) throws StatsEngineException {
+        public Map<String, Long> getOwnerActionCount(Query query) throws StatsEngineException {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 

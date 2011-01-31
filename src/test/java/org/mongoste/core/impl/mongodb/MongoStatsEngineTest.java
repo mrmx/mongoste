@@ -700,32 +700,32 @@ public class MongoStatsEngineTest {
         engine.handleEvent(event);
         String owner = event.getTargetOwners().get(0);
         System.out.println("Search for owner:"+owner);
-        Map result = engine.getOwnerActionCount(event.getClientId(), event.getTargetType(), owner);
+        Query query = engine.createQuery();
+        query.filterBy(QueryField.CLIENT_ID, event.getClientId());
+        query.filterBy(QueryField.TARGET_TYPE, event.getTargetType());
+        query.filterBy(QueryField.TARGET_OWNER, event.getTargetOwners());
+        Map result = query.getOwnerActionCount();
         assertNotNull(result);
         assertEquals(1,result.size());
+        
         //No result
-        result = engine.getOwnerActionCount(
-                event.getClientId(), event.getTargetType(),
-                "unknown-owner"
-        );
+        query.filterBy(QueryField.TARGET_OWNER, "unknown-owner");
+        result = query.getOwnerActionCount();
         assertNotNull(result);
         assertEquals(0,result.size());
         System.out.println("result:"+result);
+
         //Search with tags
-        result = engine.getOwnerActionCount(
-                event.getClientId(),
-                event.getTargetType(), owner,
-                event.getTargetTags().toArray(new String[]{})
-        );
+        query.filterBy(QueryField.TARGET_OWNER, event.getTargetOwners());
+        query.filterBy(QueryField.TARGET_TAGS, event.getTargetTags());
+        result = query.getOwnerActionCount();
         assertNotNull(result);
         assertEquals(1,result.size());
         System.out.println("result:"+result);
+        
         //Empty result search with unknown tag
-        result = engine.getOwnerActionCount(
-                event.getClientId(),
-                event.getTargetType(), owner,
-                "unknown-tag"
-        );
+        query.filterBy(QueryField.TARGET_TAGS, "unknown-tag");
+        result = query.getOwnerActionCount();        
         assertNotNull(result);
         assertEquals(0,result.size());
         System.out.println("result:"+result);

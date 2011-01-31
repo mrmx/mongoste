@@ -110,6 +110,7 @@ public class DefaultQuery implements Query {
      * @param value Value to apply
      * @return
      */
+    @Override
     public Query filterBy(QueryField field,QueryOp operation,Object value) {
         return filterBy(field,new QueryFilter(operation,value));
     }
@@ -155,6 +156,7 @@ public class DefaultQuery implements Query {
      * @throws StatsEngineException
      * @see StatCounter
      */
+    @Override
     public List<StatCounter> getTopTargets() throws StatsEngineException {
         assertNotEmpty(CLIENT_ID,TARGET_TYPE,ACTION);
         log.debug("getTopTargets query {}",this);
@@ -167,10 +169,23 @@ public class DefaultQuery implements Query {
      * @return a map of action->count
      * @throws StatsEngineException
      */
+    @Override
     public Map<String,Long> getMultiTargetActionCount() throws StatsEngineException {
         assertNotEmpty(CLIENT_ID,TARGET_TYPE,TARGET);
         log.debug("getMultiTargetActionCount query {}",this);
         return statsEngine.getMultiTargetActionCount(this);
+    }
+
+    /**
+     * Returns the action counters of given target owner/s
+     * @return a map of action->count
+     * @throws StatsEngineException
+     */
+    @Override
+    public Map<String,Long> getOwnerActionCount() throws StatsEngineException {
+        assertNotEmpty(CLIENT_ID,TARGET_TYPE,TARGET_OWNER);
+        log.debug("getOwnerActionCount query {}",this);
+        return statsEngine.getOwnerActionCount(this);
     }
 
 
