@@ -665,14 +665,13 @@ public class MongoStatsEngineTest {
     }
 
     /**
-     * Test of getMultiTargetActionCount method, of class MongoStatsEngine.
+     * Test of getTargetActionCount method, of class MongoStatsEngine.
      */
     @Test
-    public void testGetMultiTargetActionCount() throws Exception {
-        System.out.println("getMultiTargetActionCount");
+    public void testGetTargetActionCount() throws Exception {
+        System.out.println("getTargetActionCount");
         StatEvent event = engine.createSampleEvent();
-        engine.handleEvent(event);
-        
+        engine.handleEvent(event);        
         Query query = engine.createQuery();
         query.filterBy(QueryField.CLIENT_ID, event.getClientId());
         query.filterBy(QueryField.TARGET_TYPE, event.getTargetType());
