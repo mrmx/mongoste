@@ -65,6 +65,15 @@ public interface Query extends Serializable {
     Query filterBy(QueryField field, Object value);
 
     /**
+     * Sets a filter to a single field with an operation
+     * @param field Field to filter by
+     * @param operation Filter operation
+     * @param value Value to apply
+     * @return
+     */
+    Query filterBy(QueryField field, QueryOp operation, Object value);
+
+    /**
      * Sets a filter to a single field
      * @param field Field to filter by
      * @param filter Filter to apply

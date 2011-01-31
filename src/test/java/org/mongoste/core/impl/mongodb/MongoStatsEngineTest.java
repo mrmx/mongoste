@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.text.ParseException;
 import org.mongoste.query.Query;
+import org.mongoste.query.QueryOp;
 import org.mongoste.query.RequiredQueryFieldException;
 
 /**
@@ -682,9 +683,11 @@ public class MongoStatsEngineTest {
         System.out.println("result:"+result);
         //TODO check collection
         List<String> targets = Arrays.asList(event.getTarget());
-        //query.filterBy(QueryField.TARGET,QueryOp.IN,targets)
-        //query.filterBy(QueryField.TARGET).in(targets) 
-
+        query.filterBy(QueryField.TARGET,QueryOp.IN,targets);      
+        result = query.getMultiTargetActionCount();
+        assertNotNull(result);
+        assertEquals(1,result.size());
+        System.out.println("result:"+result);
     }
 
     /**

@@ -99,7 +99,19 @@ public class DefaultQuery implements Query {
      */
     @Override
     public Query filterBy(QueryField field,Object value) {
-        return filterBy(field,new QueryFilter(QueryOp.EQ,value));
+        return filterBy(field,QueryOp.EQ,value);
+    }
+
+    
+    /**
+     * Sets a filter to a single field with an operation
+     * @param field Field to filter by
+     * @param operation Filter operation
+     * @param value Value to apply
+     * @return
+     */
+    public Query filterBy(QueryField field,QueryOp operation,Object value) {
+        return filterBy(field,new QueryFilter(operation,value));
     }
     
     /**
