@@ -15,10 +15,11 @@
  */
 package org.mongoste.util;
 
+import org.joda.time.DateTime;
+
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.SimpleTimeZone;
 import java.util.TimeZone;
 
 /**
@@ -30,8 +31,11 @@ public class DateUtil {
     public static final SimpleDateFormat FORMAT_YY_MM_DD    = new SimpleDateFormat("yyyy-M-dd");
     public static final SimpleDateFormat FORMAT_YY_MM_DD_HH = new SimpleDateFormat("yyyy-M-dd HH");
 
+    /*
     private final static TimeZone gmtTimeZone = new SimpleTimeZone(0, "GMT");
-
+    private final static TimeZone utcTimeZone = TimeZone.getTimeZone("UTC");
+    */
+    
     public static Date getDateGMT0() {
         return getCalendarGMT0().getTime();
     }
@@ -40,8 +44,11 @@ public class DateUtil {
      *
      * @return Calendar with the current system date at GMT 0
      */
-    public static Calendar getCalendarGMT0() {        
-        return Calendar.getInstance(gmtTimeZone);
+    public static Calendar getCalendarGMT0() {
+        Calendar cal = Calendar.getInstance();        
+        TimeZone tz = cal.getTimeZone();
+        cal.add(Calendar.MILLISECOND, -tz.getOffset(cal.getTimeInMillis()));
+        return cal;        
     }
 
     public static Calendar trimTime(Calendar cal) {
@@ -51,5 +58,9 @@ public class DateUtil {
         cal.set(Calendar.SECOND,0);
         cal.set(Calendar.MILLISECOND,0);
         return cal;
+    }
+
+    public static DateTime getDateTimeGMT0() {
+        return new DateTime(getCalendarGMT0());
     }
 }
