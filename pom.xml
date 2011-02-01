@@ -5,7 +5,7 @@
     <groupId>org.mongoste</groupId>
     <artifactId>mongoste-core</artifactId>
     <packaging>jar</packaging>
-    <version>0.3.1</version>
+    <version>0.3.3</version>
     <name>Mongoste</name>
     <description>Mongo STats Engine</description>
     <url>http://bitbucket.org/mrmx/mongoste</url>
@@ -63,7 +63,11 @@
             <artifactId>mongo-java-driver</artifactId>
             <version>2.4</version>
         </dependency>
-        
+        <dependency>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+            <version>1.6.2</version>
+        </dependency>
         <!-- Testing deps: -->
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -77,17 +81,14 @@
             <version>4.8.2</version>
             <scope>test</scope>
         </dependency>
+        <!--
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-all</artifactId>
             <version>1.8.5</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>joda-time</groupId>
-            <artifactId>joda-time</artifactId>
-            <version>1.6.2</version>
-        </dependency>
+        -->
     </dependencies>
     <reporting>
         <plugins>

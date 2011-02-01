@@ -15,17 +15,15 @@
  */
 package org.mongoste.model;
 
-import java.util.Calendar;
+import org.mongoste.util.DateUtil;
+
 import org.joda.time.DateTime;
+import org.joda.time.MutableDateTime;
 
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import org.joda.time.DateTimeZone;
-import org.joda.time.MutableDateTime;
-
-import org.mongoste.util.DateUtil;
 
 /**
  * Main stat event object

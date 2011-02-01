@@ -306,6 +306,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         return getActionCount(queryDoc);
     }
 
+    @Override
     public List<StatAction> getTargetStats(Query query) throws StatsEngineException {
         DBObject queryDoc = MongoUtil.createDoc(
             EVENT_CLIENT_ID , getQueryValue(query,QueryField.CLIENT_ID),
@@ -314,37 +315,32 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         );
         QueryFilter dateFromFilter = query.getFilter(QueryField.DATE_FROM);
         DateTime dtFrom = null;
-        if(dateFromFilter != null && !dateFromFilter.isEmpty()) {
-            Date date = (Date) dateFromFilter.getValue();
-            dtFrom = new DateTime(date);
+        if(dateFromFilter != null) {            
+            dtFrom = dateFromFilter.getDateTimeValue();
         }
         QueryFilter dateToFilter = query.getFilter(QueryField.DATE_TO);
         DateTime dtTo = null;
-        if(dateToFilter != null && !dateToFilter.isEmpty()) {
-            Date date = (Date) dateToFilter.getValue();
-            dtTo = new DateTime(date);
-        }
-        if(dtTo == null) {
-            dtTo = DateUtil.getDateTimeUTC();
-        }
+        if(dateToFilter != null) {            
+            dtTo = dateToFilter.getDateTimeValue();
+        }        
         if(dtFrom == null) {
             //Set to date
-            queryDoc.put(EVENT_DATE,new BasicDBObject("$lte", dtTo.toDate()));
-            //queryDoc.put(TARGET_YEAR,new BasicDBObject("$lte", dtTo.getYear()));
+            queryDoc.put(EVENT_DATE,new BasicDBObject("$lte", dtTo.toDate()));            
         } else {
-            if(dtTo.isBefore(dtFrom)) {
-                DateTime dt = dtFrom;
-                dtFrom = dtTo;
-                dtTo = dt;
+            if(dtTo == null) {
+                //Set from date
+                queryDoc.put(EVENT_DATE,new BasicDBObject("$gte", dtFrom.toDate()));
+            } else {
+                if(dtTo.isBefore(dtFrom)) {
+                    DateTime dt = dtFrom;
+                    dtFrom = dtTo;
+                    dtTo = dt;
+                }
+                //Set from-to date
+                queryDoc.put(EVENT_DATE,
+                        new BasicDBObject("$gte", dtFrom.toDate()).append("$lte",dtTo.toDate())
+                );
             }
-            //Set from-to date
-            queryDoc.put(EVENT_DATE,
-                    new BasicDBObject("$gte", dtFrom.toDate()).append("$lte",dtTo.toDate())
-            );
-            /*
-            queryDoc.put(TARGET_YEAR,
-                    new BasicDBObject("$gte", dtFrom.getYear()).append("$lte", dtTo.getYear())
-            );*/
         }
         return getTargetStats(queryDoc);
     }
@@ -363,9 +359,9 @@ public class MongoStatsEngine extends AbstractStatsEngine {
                     TARGET_YEAR,1
             );
             dbc = targets.find(query,fields);
-            t = System.currentTimeMillis() - t;
+            t = System.currentTimeMillis() - t;            
             if(t > 1000) {
-                log.warn("getTargetStats query: {} took {}s", query, t / 1000.0);
+                log.warn("getTargetStats query: {}\n took {}s", debugTrim(query), t / 1000.0);
             }
             BasicDBObject resultDoc;
             Map<String,StatAction> actions = new HashMap<String,StatAction>();
@@ -420,7 +416,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
             t = System.currentTimeMillis() - t;
             //TODO add warning level to X ms:
             if(t > 1000) {
-                log.warn("getTargetStats query fetch: {} took {}s", query, t / 1000.0);
+                log.warn("getTargetStats query fetch: {}\n took {}s", debugTrim(query), t / 1000.0);
             } else {
                 log.info("getTargetStats processed {} results in {}ms", processed, t );
             }
@@ -446,7 +442,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
             dbc = counters.find(query,MongoUtil.createDoc(EVENT_ACTION,1));
             t = System.currentTimeMillis() - t;
             if(t > 1000) {
-                log.warn("getActionCount query: {} took {}s", query, t / 1000.0);
+                log.warn("getActionCount query: {}\n took {}s", debugTrim(query), t / 1000.0);
             }
             BasicDBObject actionCounters,counter;
             String action;
@@ -470,7 +466,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
             }
             t = System.currentTimeMillis() - t;
             if(t > 1000) {
-                log.warn("getActionCount query fetch: {} took {}s", query, t / 1000.0);
+                log.warn("getActionCount query fetch: {}\n took {}s", debugTrim(query), t / 1000.0);
             } else {
                 log.info("getActionCount processed {} results in {}ms", processed, t );
             }
@@ -846,6 +842,12 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     protected void dropAllCollections() {
         MongoUtil.dropCollections(db);
     }
+
+    protected DBObject debugTrim(DBObject dbo) {
+        //TODO trim arrays
+        return dbo;
+    }
+
 
     private void initFunctions() throws StatsEngineException {
         addFunction(FN_MAPPER_TARGETS,TimeScope.MONTHLY);

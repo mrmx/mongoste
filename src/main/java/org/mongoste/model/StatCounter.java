@@ -109,7 +109,7 @@ public class StatCounter {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName()+"["+getName()+":"+getCount()+"]";
+        return getClass().getSimpleName()+"["+getName()+":"+getCount()+" date:"+dateTime+"]";
     }
 
 

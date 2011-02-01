@@ -15,8 +15,11 @@
  */
 package org.mongoste.query;
 
-import java.util.Collection;
 import org.apache.commons.lang.StringUtils;
+import org.joda.time.DateTime;
+
+import java.util.Collection;
+import java.util.Date;
 
 /**
  * Query filter
@@ -62,6 +65,108 @@ public class QueryFilter {
      */
     public void setValue(Object value) {
         this.value = value;
+    }
+
+    /**
+     * Return the value as <code>Integer</code>
+     * @return the value as <code>Integer</code> or <code>null</code>
+     * if can not be converted
+     * @see Integer
+     */
+    public Integer getIntegerValue() {
+        if(value == null) {
+            return null;
+        }
+        Integer result = null;
+        if(value instanceof Number) {
+            if(value instanceof Integer) {
+                result = (Integer)value;
+            } else {
+                result = ((Number)value).intValue();
+            }
+        }
+        if(result == null) {
+            try {
+                result = Integer.valueOf(getStringValue());
+            }catch(NumberFormatException ex) {
+
+            }
+        }
+        return result;
+    }
+
+/**
+     * Return the value as <code>Long</code>
+     * @return the value as <code>Long</code> or <code>null</code>
+     * if can not be converted
+     * @see Long
+     */
+    public Long getLongValue() {
+        if(value == null) {
+            return null;
+        }
+        Long result = null;
+        if(value instanceof Number) {
+            if(value instanceof Long) {
+                result = (Long)value;
+            } else {
+                result = ((Number)value).longValue();
+            }
+        }
+        if(result == null) {
+            try {
+                result = Long.valueOf(getStringValue());
+            }catch(NumberFormatException ex) {
+
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Return the value as <code>String</code>
+     * @return the value as <code>String</code> or <code>null</code>
+     * if can not be converted
+     * @see String
+     */
+    public String getStringValue() {
+        if(value == null) {
+            return null;
+        }
+        return String.valueOf(value);
+    }
+
+    /**
+     * Return the value as <code>Date</code>
+     * @return the value as <code>Date</code> or <code>null</code>
+     * if can not be converted
+     * @see Date
+     */
+    public Date getDateValue() {
+        if(value == null) {
+            return null;
+        }
+        if(value instanceof Date) {
+            return (Date)value;
+        }
+        return null;
+    }
+
+    /**
+     * Return the value  as <code>DateTime</code>
+     * @return the value as <code>DateTime</code> or <code>null</code>
+     * if can not be converted
+     * @see DateTime
+     */
+    public DateTime getDateTimeValue() {
+        if(value == null) {
+            return null;
+        }
+        if(value instanceof DateTime) {
+            return (DateTime)value;
+        }
+        Date date = getDateValue();
+        return date == null ? null : new DateTime(date);
     }
 
     /**

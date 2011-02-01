@@ -78,4 +78,10 @@ public class DateUtil {
         );
         return  dt.toDateTime();
     }
+
+    public static DateTime buildUTCDate(int year, int month, int day) {
+        MutableDateTime mdt = new DateTime(DateTimeZone.UTC).toMutableDateTime();
+        mdt.setDate(year, month, day);
+        return trimTime(mdt.toDateTime());
+    }
 }

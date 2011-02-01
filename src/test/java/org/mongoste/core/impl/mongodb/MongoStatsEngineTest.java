@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.text.ParseException;
+import java.util.LinkedList;
 import org.joda.time.DateTimeZone;
 import org.joda.time.MutableDateTime;
 
@@ -820,8 +821,8 @@ public class MongoStatsEngineTest {
     @Test
     public void getTargetStatsSingleMonth() throws Exception {
         System.out.println("getTargetStatsSingleMonth");
-        StatEvent event1 = engine.createSampleEvent(DateUtil.FORMAT_ISO8601.parse("2011-01-01T00:00:00-0000"));
-        System.out.println("getTargetStatsSingleMonth from date "+event1.getDate()+ " ts "+event1.getDate().getTime());
+        StatEvent event1 = engine.createSampleEvent("2011-01-01");
+        System.out.println("getTargetStatsSingleMonth from date "+event1.getDate());
         engine.handleEvent(event1);
         StatEvent event2  = engine.createSampleEvent("2011-01-02");
         System.out.println("getTargetStatsSingleMonth to date "+event2.getDate());
@@ -833,6 +834,7 @@ public class MongoStatsEngineTest {
         query.filterBy(QueryField.DATE_FROM, event1.getDate());
         query.filterBy(QueryField.DATE_TO, event2.getDate());
         List<StatAction> targetStats = query.getTargetStats();
+        System.out.println("targetStats="+targetStats);
         assertNotNull(targetStats);
         //1 action with target stats:
         assertEquals(1,targetStats.size());
@@ -865,6 +867,7 @@ public class MongoStatsEngineTest {
         query.filterBy(QueryField.DATE_FROM, event1.getDate());
         query.filterBy(QueryField.DATE_TO, event2.getDate());
         List<StatAction> targetStats = query.getTargetStats();
+        System.out.println("targetStats="+targetStats);
         assertNotNull(targetStats);
         //1 action with target stats:
         assertEquals(1,targetStats.size());
@@ -885,6 +888,144 @@ public class MongoStatsEngineTest {
         assertEquals(action.getName(),secondMonthCounter.getName());
         assertEquals(2,secondMonthCounter.getDateTime().getMonthOfYear());
         assertEquals(1,secondMonthCounter.getCount());
-
     }
+
+    /**
+     * Test of getTargetStats method, of class MongoStatsEngine.
+     */
+    @Test
+    public void getTargetStatsMultipleTargetAggregation() throws Exception {
+        System.out.println("getTargetStatsMultipleTargetAggregation");
+        StatEvent event1  = engine.createSampleEvent("2011-01-01");
+        event1.setTarget("target1");
+        engine.handleEvent(event1);
+        StatEvent event2  = engine.createSampleEvent("2011-02-01");
+        event2.setTarget("target2");
+        engine.handleEvent(event2);
+        Query query = engine.createQuery();
+        query.filterBy(QueryField.CLIENT_ID, event1.getClientId());
+        query.filterBy(QueryField.TARGET_TYPE, event1.getTargetType());
+        query.filterBy(QueryField.TARGET, QueryOp.IN,Arrays.asList(event1.getTarget(),event2.getTarget()));
+        query.filterBy(QueryField.DATE_FROM, event1.getDate());
+        query.filterBy(QueryField.DATE_TO, event2.getDate());
+        List<StatAction> targetStats = query.getTargetStats();
+        System.out.println("targetStats="+targetStats);
+        assertNotNull(targetStats);
+        //1 action with target stats:
+        assertEquals(1,targetStats.size());
+        StatAction action = targetStats.get(0);
+        assertEquals(event1.getAction(),action.getName());
+        //Global action count:
+        assertEquals(2,action.getCount());
+        assertNotNull(action.getTargets());
+        //2 months target stats:
+        assertEquals(2,action.getTargets().size());
+
+        StatCounter firstMonthCounter = action.getTargets().get(0);
+        assertEquals(action.getName(),firstMonthCounter.getName());
+        assertEquals(1,firstMonthCounter.getDateTime().getMonthOfYear());
+        assertEquals(1,firstMonthCounter.getCount());
+
+        StatCounter secondMonthCounter = action.getTargets().get(1);
+        assertEquals(action.getName(),secondMonthCounter.getName());
+        assertEquals(2,secondMonthCounter.getDateTime().getMonthOfYear());
+        assertEquals(1,secondMonthCounter.getCount());
+    }
+
+    /**
+     * Test of getTargetStats method, of class MongoStatsEngine.
+     */
+    @Test
+    public void getTargetStatsMultipleActionTargetAggregation() throws Exception {
+        System.out.println("getTargetStatsMultipleActionTargetAggregation");
+        StatEvent event1  = engine.createSampleEvent("2011-01-01");
+        event1.setAction("action1");
+        event1.setTarget("target1");
+        engine.handleEvent(event1);
+        StatEvent event2  = engine.createSampleEvent("2011-02-01");
+        event2.setAction("action2");
+        event2.setTarget("target2");
+        engine.handleEvent(event2);
+        Query query = engine.createQuery();
+        query.filterBy(QueryField.CLIENT_ID, event1.getClientId());
+        query.filterBy(QueryField.TARGET_TYPE, event1.getTargetType());
+        query.filterBy(QueryField.TARGET, QueryOp.IN,Arrays.asList(event1.getTarget(),event2.getTarget()));
+        query.filterBy(QueryField.DATE_FROM, event1.getDate());
+        query.filterBy(QueryField.DATE_TO, event2.getDate());
+        List<StatAction> targetStats = query.getTargetStats();
+        System.out.println("targetStats="+targetStats);
+        assertNotNull(targetStats);
+        //2 action with target stats:
+        assertEquals(2,targetStats.size());
+        for(StatAction action : targetStats) {
+            //Global action count:
+            assertEquals(1,action.getCount());
+            assertNotNull(action.getTargets());
+            //1 months target stats:
+            assertEquals(1,action.getTargets().size());
+
+            StatCounter statCounter = action.getTargets().get(0);
+            assertEquals(action.getName(),statCounter.getName());            
+            assertEquals(1,statCounter.getCount());
+
+        }
+    }
+
+    /**
+     * Test of getTargetStats method, of class MongoStatsEngine.
+     */
+    @Test
+    public void getTargetStatsMultipleActionTargetAggregation1m() throws Exception {
+        System.out.println("getTargetStatsMultipleActionTargetAggregation1m");
+        int maxActions = 4;
+        int maxTargets = 1000;
+        int eventsPerMonth = maxTargets / 10;
+        DateTime beginDate = DateUtil.buildUTCDate(2011,1,1);
+        DateTime date;
+        long t0 = System.currentTimeMillis();
+        List<String> targets = new LinkedList<String>();
+        for(int e = 1 ; e <= maxTargets ; e++) {
+            targets.add("target"+e);
+        }
+        System.out.println("Start date "+beginDate);
+        StatEvent event = null;
+        int events = 0;
+        for(int a = 1 ; a <= maxActions ; a++) {
+            date = new DateTime(beginDate);
+            for(int t = 1 ; t <= maxTargets ; t++) {
+                event = engine.createSampleEvent(date);
+                event.setAction("action"+a);
+                event.setTarget("target"+t);
+                engine.handleEvent(event);
+                if(t % eventsPerMonth == 0) {
+                    date = date.plusMonths(1);
+                }
+                events++;
+            }
+        }
+        System.out.printf("Handled %d events in %d ms\n",events,System.currentTimeMillis()-t0);
+        t0 = System.currentTimeMillis();
+        Query query = engine.createQuery();
+        query.filterBy(QueryField.CLIENT_ID, event.getClientId());
+        query.filterBy(QueryField.TARGET_TYPE, event.getTargetType());
+        query.filterBy(QueryField.TARGET, QueryOp.IN,targets);
+        query.filterBy(QueryField.DATE_FROM, beginDate);        
+        List<StatAction> targetStats = query.getTargetStats();
+        System.out.printf("Query took %d ms\n",System.currentTimeMillis()-t0);
+        assertNotNull(targetStats);
+        //action with target stats:
+        assertEquals(maxActions,targetStats.size());
+        for(StatAction action : targetStats) {
+            //Global action count:        
+            assertNotNull(action.getTargets());
+            System.out.println("Action "+action.getName()+ " count= "+action.getCount());
+            System.out.println("Action "+action.getName() + " has " + action.getTargets().size() + " targets");
+            long total = 0;
+            for(StatCounter counter : action.getTargets()) {
+                total += counter.getCount();
+            }
+            assertEquals(action.getCount(), total);
+        }
+    }
+
 }
