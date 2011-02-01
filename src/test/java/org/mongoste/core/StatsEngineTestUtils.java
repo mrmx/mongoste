@@ -20,6 +20,7 @@ import org.mongoste.model.StatEvent;
 import org.mongoste.util.DateUtil;
 
 import java.util.Calendar;
+import org.joda.time.DateTime;
 
 /**
  * Some test utils
@@ -29,8 +30,9 @@ public class StatsEngineTestUtils {
 
     public static void buildSamples(StatsEngine statsEngine) throws StatsEngineException {
         StatEvent event;
-        Calendar cal = DateUtil.getCalendarGMT0();
-        DateUtil.trimTime(cal);
+        DateTime dt = DateUtil.getDateTimeUTC();
+        dt = DateUtil.trimTime(dt);
+        Calendar cal = dt.toGregorianCalendar();
         cal.set(Calendar.DATE,1);
         //cal.set(Calendar.MONTH,C);
         cal.set(Calendar.HOUR_OF_DAY,0);

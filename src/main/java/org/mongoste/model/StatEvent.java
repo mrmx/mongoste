@@ -16,10 +16,16 @@
 package org.mongoste.model;
 
 import java.util.Calendar;
+import org.joda.time.DateTime;
+
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import org.joda.time.DateTimeZone;
+import org.joda.time.MutableDateTime;
+
+import org.mongoste.util.DateUtil;
 
 /**
  * Main stat event object
@@ -32,8 +38,7 @@ public class StatEvent {
     private List<String> targetOwners;
     private List<String> targetTags;
     private String action;
-    private Date   date;
-    private Calendar calendar;
+    private DateTime   date;    
     private Map<String,Object> metadata;
 
     /**
@@ -124,14 +129,34 @@ public class StatEvent {
      * @return the date
      */
     public Date getDate() {
+        return date.toDate();
+    }
+
+    /**
+     * @param date the date to set
+     */
+    public void setDate(Date date) {        
+        setDateTime(new DateTime(date));
+    }
+
+    /**
+     * @param date the date to set
+     */
+    public void setDate(DateTime date) {
+        setDateTime(date);
+    }
+    
+    /**
+     * @return the date
+     */
+    public DateTime getDateTime() {
         return date;
     }
 
     /**
      * @param date the date to set
      */
-    public void setDate(Date date) {
-        this.calendar = null;
+    public void setDateTime(DateTime date) {
         this.date = date;
     }
 
@@ -152,34 +177,30 @@ public class StatEvent {
         this.metadata = metadata;
     }
 
-
-    public int getYear() {
-        return getCalendar().get(Calendar.YEAR);
+    public DateTime getYearMonthDate() {
+        MutableDateTime dt = DateUtil.getDateTimeUTC().toMutableDateTime();
+        dt.setDateTime(getYear(), getMonth(), 1 ,0, 0, 0, 0);
+        return dt.toDateTime();
     }
 
+    public int getYear() {
+        return getDateTime().getYear();
+    }
 
     public int getWeek() {
-        return getCalendar().get(Calendar.WEEK_OF_YEAR);
+        return getDateTime().getWeekOfWeekyear();
     }
 
     public int getMonth() {
-        return getCalendar().get(Calendar.MONTH) + 1;
+        return getDateTime().getMonthOfYear();
     }
 
     public int getDay() {
-        return getCalendar().get(Calendar.DATE);
+        return getDateTime().getDayOfMonth();
     }
 
     public int getHour() {
-        return getCalendar().get(Calendar.HOUR_OF_DAY);
-    }
-
-    private Calendar getCalendar()  {
-        if(calendar == null) {
-            calendar = Calendar.getInstance();
-            calendar.setTime(getDate());
-        }
-        return calendar;
+        return getDateTime().getHourOfDay();
     }
 
 }

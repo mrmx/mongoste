@@ -24,8 +24,6 @@ import java.util.List;
  * @author mrmx
  */
 public class StatAction extends StatCounter {
-    private String name;
-    private long count;
     private List<StatCounter> targets;
 
     public StatAction(String name, long count) {

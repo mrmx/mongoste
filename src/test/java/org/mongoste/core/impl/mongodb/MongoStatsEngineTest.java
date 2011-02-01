@@ -21,13 +21,17 @@ import org.mongoste.core.TimeScope;
 import org.mongoste.model.StatAction;
 import org.mongoste.model.StatCounter;
 import org.mongoste.util.DateUtil;
+import org.mongoste.query.Query;
+import org.mongoste.query.QueryOp;
+import org.mongoste.query.RequiredQueryFieldException;
+
+import org.joda.time.DateTime;
 
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
-import java.util.ArrayList;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -37,6 +41,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
@@ -44,9 +49,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.text.ParseException;
-import org.mongoste.query.Query;
-import org.mongoste.query.QueryOp;
-import org.mongoste.query.RequiredQueryFieldException;
+import org.joda.time.DateTimeZone;
+import org.joda.time.MutableDateTime;
 
 /**
  * MongoStatsEngine Test
@@ -57,7 +61,7 @@ public class MongoStatsEngineTest {
 
     private static class MongoStatsEngineEx extends MongoStatsEngine {
         public StatEvent createSampleEvent() {
-            return createSampleEvent(DateUtil.getDateGMT0());
+            return createSampleEvent(DateUtil.getDateTimeUTC());
         }
         public StatEvent createSampleEvent(String date) throws ParseException {
             Date parsedDate = null;
@@ -69,6 +73,14 @@ public class MongoStatsEngineTest {
             return createSampleEvent(parsedDate);
         }
         public StatEvent createSampleEvent(Date date) {
+            return createSampleEvent(new DateTime(date));
+        }
+
+        public StatEvent createSampleEvent(MutableDateTime date) {
+            return createSampleEvent(date.toDateTime());
+        }
+        
+        public StatEvent createSampleEvent(DateTime date) {
             StatEvent event = new StatEvent();
             event.setClientId("client");
             event.setAction("action");
@@ -76,7 +88,8 @@ public class MongoStatsEngineTest {
             event.setTarget("target");
             event.setTargetOwners(Arrays.asList("owner1","owner2"));
             event.setTargetTags(Arrays.asList("tag1","tag2"));
-            event.setDate(date);
+            //Force sample dates to UTC
+            event.setDateTime(DateUtil.toUTC(date));
             return event;
         }
     }
@@ -101,7 +114,7 @@ public class MongoStatsEngineTest {
     @Before
     public void setUp() throws Exception {
         engine.dropAllCollections();
-        engine.setTimeScopePrecision(engine.DEFAULT_TIMESCOPE_PRECISION);
+        engine.setTimeScopePrecision(MongoStatsEngine.DEFAULT_TIMESCOPE_PRECISION);
     }
 
     @After
@@ -279,14 +292,14 @@ public class MongoStatsEngineTest {
         assertEquals(1,targets.count());
         DBObject target = targets.find().next();
         assertNotNull(target);
-        BasicDBList owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
+        BasicDBList owners = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
         assertNull(owners);
         //Check single owner
         event.setTargetOwners(Arrays.asList("owner1"));
         engine.handleEvent(event);
         target = targets.find().next();
         assertNotNull(target);
-        owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
+        owners = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
         assertNotNull(owners);
         assertEquals(1,owners.size());
         assertEquals("owner1",owners.get(0));
@@ -294,13 +307,12 @@ public class MongoStatsEngineTest {
         event.setTargetOwners(Arrays.asList("owner2"));
         engine.handleEvent(event);
         //next month
-        Calendar cal = DateUtil.trimTime(DateUtil.getCalendarGMT0());
-        cal.add(Calendar.MONTH,1);
-        event.setDate(cal.getTime());
+        DateTime nextMonth = event.getDateTime().plusMonths(1);
+        event.setDateTime(nextMonth);
         engine.handleEvent(event);
         target = targets.find().next();
         assertNotNull(target);
-        owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
+        owners = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
         assertNotNull(owners);
         assertEquals(2,owners.size());
         assertEquals("owner1",owners.get(0));
@@ -319,14 +331,14 @@ public class MongoStatsEngineTest {
         assertEquals(1,targets.count());
         DBObject target = targets.find().next();
         assertNotNull(target);
-        BasicDBList tags = (BasicDBList) target.get(engine.EVENT_TARGET_TAGS);
+        BasicDBList tags = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_TAGS);
         assertNull(tags);
         //Check single tag
         event.setTargetTags(Arrays.asList("tag1"));
         engine.handleEvent(event);
         target = targets.find().next();        
         assertNotNull(target);
-        tags = (BasicDBList) target.get(engine.EVENT_TARGET_TAGS);
+        tags = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_TAGS);
         assertNotNull(tags);
         assertEquals(1,tags.size());
         assertEquals("tag1",tags.get(0));
@@ -334,13 +346,12 @@ public class MongoStatsEngineTest {
         event.setTargetTags(Arrays.asList("tag2"));
         engine.handleEvent(event);
         //next month
-        Calendar cal = DateUtil.trimTime(DateUtil.getCalendarGMT0());
-        cal.add(Calendar.MONTH,1);
-        event.setDate(cal.getTime());
+        DateTime nextMonth = event.getDateTime().plusMonths(1);
+        event.setDateTime(nextMonth);
         engine.handleEvent(event);
         target = targets.find().next();
         assertNotNull(target);
-        tags = (BasicDBList) target.get(engine.EVENT_TARGET_TAGS);
+        tags = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_TAGS);
         assertNotNull(tags);
         assertEquals(2,tags.size());
         assertEquals("tag1",tags.get(0));
@@ -365,12 +376,12 @@ public class MongoStatsEngineTest {
 
         DBObject target = targets.find().next();
         assertNotNull(target);
-        BasicDBList tags = (BasicDBList) target.get(engine.EVENT_TARGET_TAGS);
+        BasicDBList tags = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_TAGS);
         assertNull(tags);       
 
         DBObject targetCounter = counters.find().next();
         assertNotNull(targetCounter);
-        BasicDBList counterTags = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_TAGS);        
+        BasicDBList counterTags = (BasicDBList) targetCounter.get(MongoStatsEngine.EVENT_TARGET_TAGS);
 
         //Check single tag
         engine.setTargetTags(event.getClientId(), event.getTargetType(),event.getTarget(), Arrays.asList("tag1"));
@@ -379,12 +390,12 @@ public class MongoStatsEngineTest {
         targetCounter = counters.find().next();
         assertNotNull(targetCounter);
 
-        tags = (BasicDBList) target.get(engine.EVENT_TARGET_TAGS);
+        tags = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_TAGS);
         assertNotNull(tags);
         assertEquals(1,tags.size());
         assertEquals("tag1",tags.get(0));
         
-        counterTags = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_TAGS);
+        counterTags = (BasicDBList) targetCounter.get(MongoStatsEngine.EVENT_TARGET_TAGS);
         assertNotNull(counterTags);
         assertEquals(1,counterTags.size());
         assertEquals("tag1",counterTags.get(0));
@@ -396,13 +407,13 @@ public class MongoStatsEngineTest {
         targetCounter = counters.find().next();
         assertNotNull(targetCounter);
 
-        tags = (BasicDBList) target.get(engine.EVENT_TARGET_TAGS);
+        tags = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_TAGS);
         assertNotNull(tags);
         assertEquals(2,tags.size());
         assertEquals("tag1",tags.get(0));
         assertEquals("tag2",tags.get(1));
         
-        counterTags = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_TAGS);
+        counterTags = (BasicDBList) targetCounter.get(MongoStatsEngine.EVENT_TARGET_TAGS);
         assertNotNull(counterTags);
         assertEquals(2,counterTags.size());
         assertEquals("tag1",counterTags.get(0));
@@ -415,12 +426,12 @@ public class MongoStatsEngineTest {
         targetCounter = counters.find().next();
         assertNotNull(targetCounter);
 
-        tags = (BasicDBList) target.get(engine.EVENT_TARGET_TAGS);
+        tags = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_TAGS);
         assertNotNull(tags);
         assertEquals(1,tags.size());
         assertEquals("tag2",tags.get(0));
 
-        counterTags = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_TAGS);
+        counterTags = (BasicDBList) targetCounter.get(MongoStatsEngine.EVENT_TARGET_TAGS);
         assertNotNull(counterTags);
         assertEquals(1,counterTags.size());
         assertEquals("tag2",counterTags.get(0));
@@ -444,12 +455,12 @@ public class MongoStatsEngineTest {
 
         DBObject target = targets.find().next();
         assertNotNull(target);
-        BasicDBList owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
+        BasicDBList owners = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
         assertNull(owners);
 
         DBObject targetCounter = counters.find().next();
         assertNotNull(targetCounter);
-        BasicDBList counterOwners = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_OWNERS);
+        BasicDBList counterOwners = (BasicDBList) targetCounter.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
         assertNull(counterOwners);
 
         //Check single owner
@@ -459,12 +470,12 @@ public class MongoStatsEngineTest {
         targetCounter = counters.find().next();
         assertNotNull(targetCounter);
 
-        owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
+        owners = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
         assertNotNull(owners);
         assertEquals(1,owners.size());
         assertEquals("own1",owners.get(0));
 
-        counterOwners = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_OWNERS);
+        counterOwners = (BasicDBList) targetCounter.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
         assertNotNull(counterOwners);
         assertEquals(1,counterOwners.size());
         assertEquals("own1",counterOwners.get(0));
@@ -476,13 +487,13 @@ public class MongoStatsEngineTest {
         targetCounter = counters.find().next();
         assertNotNull(targetCounter);
 
-        owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
+        owners = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
         assertNotNull(owners);
         assertEquals(2,owners.size());
         assertEquals("own1",owners.get(0));
         assertEquals("own2",owners.get(1));
 
-        counterOwners = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_OWNERS);
+        counterOwners = (BasicDBList) targetCounter.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
         assertNotNull(counterOwners);
         assertEquals(2,counterOwners.size());
         assertEquals("own1",counterOwners.get(0));
@@ -495,12 +506,12 @@ public class MongoStatsEngineTest {
         targetCounter = counters.find().next();
         assertNotNull(targetCounter);
 
-        owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
+        owners = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
         assertNotNull(owners);
         assertEquals(1,owners.size());
         assertEquals("own2",owners.get(0));
 
-        counterOwners = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_OWNERS);
+        counterOwners = (BasicDBList) targetCounter.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
         assertNotNull(counterOwners);
         assertEquals(1,counterOwners.size());
         assertEquals("own2",counterOwners.get(0));
@@ -532,11 +543,11 @@ public class MongoStatsEngineTest {
         for(String tgt : targetList) {
             DBObject target = targets.find().next();
             assertNotNull(target);
-            BasicDBList owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
+            BasicDBList owners = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
             assertNull(owners);
             DBObject targetCounter = counters.find().next();
             assertNotNull(targetCounter);
-            BasicDBList counterOwners = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_OWNERS);
+            BasicDBList counterOwners = (BasicDBList) targetCounter.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
             assertNull(counterOwners);
         }
 
@@ -547,11 +558,11 @@ public class MongoStatsEngineTest {
             assertNotNull(target);
             DBObject targetCounter = counters.find().next();
             assertNotNull(targetCounter);
-            BasicDBList owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
+            BasicDBList owners = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
             assertNotNull(owners);
             assertEquals(1,owners.size());
             assertEquals("own1",owners.get(0));
-            BasicDBList counterOwners = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_OWNERS);
+            BasicDBList counterOwners = (BasicDBList) targetCounter.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
             assertNotNull(counterOwners);
             assertEquals(1,counterOwners.size());
             assertEquals("own1",counterOwners.get(0));
@@ -565,13 +576,13 @@ public class MongoStatsEngineTest {
             DBObject targetCounter = counters.find().next();
             assertNotNull(targetCounter);
 
-            BasicDBList owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
+            BasicDBList owners = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
             assertNotNull(owners);
             assertEquals(2,owners.size());
             assertEquals("own1",owners.get(0));
             assertEquals("own2",owners.get(1));
 
-            BasicDBList counterOwners = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_OWNERS);
+            BasicDBList counterOwners = (BasicDBList) targetCounter.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
             assertNotNull(counterOwners);
             assertEquals(2,counterOwners.size());
             assertEquals("own1",counterOwners.get(0));
@@ -586,12 +597,12 @@ public class MongoStatsEngineTest {
             DBObject targetCounter = counters.find().next();
             assertNotNull(targetCounter);
 
-            BasicDBList owners = (BasicDBList) target.get(engine.EVENT_TARGET_OWNERS);
+            BasicDBList owners = (BasicDBList) target.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
             assertNotNull(owners);
             assertEquals(1,owners.size());
             assertEquals("own2",owners.get(0));
 
-            BasicDBList counterOwners = (BasicDBList) targetCounter.get(engine.EVENT_TARGET_OWNERS);
+            BasicDBList counterOwners = (BasicDBList) targetCounter.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
             assertNotNull(counterOwners);
             assertEquals(1,counterOwners.size());
             assertEquals("own2",counterOwners.get(0));
@@ -599,65 +610,84 @@ public class MongoStatsEngineTest {
     }
 
     @Test
+    public void testTargetCollectionSingle() throws Exception {
+        System.out.println("testTargetCollectionSingle");
+        StatEvent event = engine.createSampleEvent();
+        engine.handleEvent(event);
+        DBCollection targets = engine.getTargetCollection();
+        assertNotNull(targets);
+        assertEquals(1,targets.count());
+        DBObject target = targets.find().next();
+        assertNotNull(target);
+        assertEquals(event.getClientId(),target.get(MongoStatsEngine.EVENT_CLIENT_ID));
+        assertEquals(event.getAction(),target.get(MongoStatsEngine.EVENT_ACTION));
+        assertEquals(event.getTargetType(),target.get(MongoStatsEngine.EVENT_TARGET_TYPE));
+        assertEquals(event.getTarget(),target.get(MongoStatsEngine.EVENT_TARGET));
+        assertEquals(event.getMonth(),target.get(MongoStatsEngine.TARGET_MONTH));
+        assertEquals(event.getYear(),target.get(MongoStatsEngine.TARGET_YEAR));
+        DateTime date = new DateTime((Date) target.get(MongoStatsEngine.EVENT_DATE),DateTimeZone.UTC);
+        assertNotNull(date);
+        assertEquals(DateUtil.trimTime(event.getDateTime()),date);
+    }
+
+    @Test
     public void testTargetCollection() throws Exception {
         System.out.println("testTargetCollection");
-        Calendar cal = DateUtil.trimTime(DateUtil.getCalendarGMT0());
-        cal.set(Calendar.MONTH, Calendar.JANUARY);
-        cal.set(Calendar.DATE, 1);
-        System.out.println("2 events for "+cal.getTime());
-        StatEvent event = engine.createSampleEvent();
-        event.setDate(cal.getTime());
-        engine.handleEvent(event);
-        cal.add(Calendar.HOUR_OF_DAY,1);
-        event.setDate(cal.getTime());
+        MutableDateTime date = DateUtil.getDateTimeUTC(true).toMutableDateTime();
+        date.setMonthOfYear(1);
+        date.setDayOfMonth(1);
+        System.out.println("2 events for "+date);
+        StatEvent event = engine.createSampleEvent(date);
+        engine.handleEvent(event);        
+        event.setDate(date.toDateTime().plusHours(1));
         engine.handleEvent(event);
         //Next month
-        cal.add(Calendar.MONTH,1);
-        System.out.println("1 event for "+cal.getTime());
-        event.setDate(cal.getTime());        
+        DateTime nextMonth = date.toDateTime().plusMonths(1);
+        System.out.println("1 event for "+nextMonth);
+        event.setDate(nextMonth);
         engine.handleEvent(event);
         //Events in two months: 2 docs in target collection
         DBCollection targets = engine.getTargetCollection();
         assertNotNull(targets);
         assertEquals(2,targets.count());
         //Add 3th event in second month: still 2 docs in target collection
-        cal.add(Calendar.DATE,1);
-        System.out.println("1 event for "+cal.getTime());
-        event.setDate(cal.getTime());
+        DateTime lastMonthDay = nextMonth.plusDays(1);
+        System.out.println("1 event for "+lastMonthDay);
+        event.setDate(lastMonthDay);
         engine.handleEvent(event);
         targets = engine.getTargetCollection();
         assertNotNull(targets);
         assertEquals(2,targets.count());
-        DBCursor dbc = targets.find();
+        DBCursor dbc = targets.find().sort(new BasicDBObject(MongoStatsEngine.TARGET_MONTH, 1));
         assertNotNull(dbc);
         assertEquals(2,dbc.count());
         //First month
         BasicDBObject firstMonth = (BasicDBObject) dbc.next();
-        assertEquals(2,firstMonth.get(engine.FIELD_COUNT));
-        BasicDBObject days = (BasicDBObject) firstMonth.get(engine.FIELD_DAYS);
+        assertEquals(2,firstMonth.get(MongoStatsEngine.FIELD_COUNT));
+        BasicDBObject days = (BasicDBObject) firstMonth.get(MongoStatsEngine.FIELD_DAYS);
         assertNotNull(days);
         assertEquals(1,days.size());
         //Check target owners:
-        BasicDBList owners = (BasicDBList) firstMonth.get(engine.EVENT_TARGET_OWNERS);
+        BasicDBList owners = (BasicDBList) firstMonth.get(MongoStatsEngine.EVENT_TARGET_OWNERS);
         assertNotNull(owners);
         assertEquals(2,owners.size());
         assertEquals("owner1",owners.get(0));
         assertEquals("owner2",owners.get(1));
         //Check target tags:
-        BasicDBList tags = (BasicDBList) firstMonth.get(engine.EVENT_TARGET_TAGS);
+        BasicDBList tags = (BasicDBList) firstMonth.get(MongoStatsEngine.EVENT_TARGET_TAGS);
         assertNotNull(tags);
         assertEquals(2,tags.size());
         assertEquals("tag1",tags.get(0));
         assertEquals("tag2",tags.get(1));
         //Last month
         BasicDBObject lastMonth = (BasicDBObject) dbc.next();
-        assertEquals(cal.get(Calendar.MONTH) + 1,lastMonth.get(engine.TARGET_MONTH));
-        assertEquals(cal.get(Calendar.YEAR),lastMonth.get(engine.TARGET_YEAR));
-        assertEquals(2,lastMonth.get(engine.FIELD_COUNT));
-        days = (BasicDBObject) lastMonth.get(engine.FIELD_DAYS);
+        assertEquals(nextMonth.getMonthOfYear(),lastMonth.get(MongoStatsEngine.TARGET_MONTH));
+        assertEquals(nextMonth.getYear(),lastMonth.get(MongoStatsEngine.TARGET_YEAR));
+        assertEquals(2,lastMonth.get(MongoStatsEngine.FIELD_COUNT));
+        days = (BasicDBObject) lastMonth.get(MongoStatsEngine.FIELD_DAYS);
         assertNotNull(days);
         assertEquals(2,days.size());
-        int lastDay = cal.get(Calendar.DATE);
+        int lastDay = lastMonthDay.getDayOfMonth();
         BasicDBObject day = (BasicDBObject) days.get(String.valueOf(lastDay));
         assertNotNull(day);
         day = (BasicDBObject) days.get(String.valueOf(--lastDay));
@@ -784,4 +814,77 @@ public class MongoStatsEngineTest {
         assertEquals(2,stats.count());
     }
 
+    /**
+     * Test of getTargetStats method, of class MongoStatsEngine.
+     */
+    @Test
+    public void getTargetStatsSingleMonth() throws Exception {
+        System.out.println("getTargetStatsSingleMonth");
+        StatEvent event1 = engine.createSampleEvent(DateUtil.FORMAT_ISO8601.parse("2011-01-01T00:00:00-0000"));
+        System.out.println("getTargetStatsSingleMonth from date "+event1.getDate()+ " ts "+event1.getDate().getTime());
+        engine.handleEvent(event1);
+        StatEvent event2  = engine.createSampleEvent("2011-01-02");
+        System.out.println("getTargetStatsSingleMonth to date "+event2.getDate());
+        engine.handleEvent(event2);
+        Query query = engine.createQuery();
+        query.filterBy(QueryField.CLIENT_ID, event1.getClientId());
+        query.filterBy(QueryField.TARGET_TYPE, event1.getTargetType());
+        query.filterBy(QueryField.TARGET, event1.getTarget());
+        query.filterBy(QueryField.DATE_FROM, event1.getDate());
+        query.filterBy(QueryField.DATE_TO, event2.getDate());
+        List<StatAction> targetStats = query.getTargetStats();
+        assertNotNull(targetStats);
+        //1 action with target stats:
+        assertEquals(1,targetStats.size());
+        StatAction action = targetStats.get(0);
+        assertEquals(event1.getAction(),action.getName());
+        assertEquals(2,action.getCount());
+        assertNotNull(action.getTargets());
+        //1 month of data
+        assertEquals(1,action.getTargets().size());
+        StatCounter counter = action.getTargets().get(0);
+        assertEquals(2,counter.getCount());
+    }
+
+    /**
+     * Test of getTargetStats method, of class MongoStatsEngine.
+     */
+    @Test
+    public void getTargetStatsTwoMonths() throws Exception {
+        System.out.println("getTargetStatsTwoMonths");
+        StatEvent event1  = engine.createSampleEvent("2011-01-01");
+        System.out.println("getTargetStatsTwoMonths from date "+event1.getDate());
+        engine.handleEvent(event1);
+        StatEvent event2  = engine.createSampleEvent("2011-02-01");
+        System.out.println("getTargetStatsTwoMonths to date "+event2.getDate());
+        engine.handleEvent(event2);
+        Query query = engine.createQuery();
+        query.filterBy(QueryField.CLIENT_ID, event1.getClientId());
+        query.filterBy(QueryField.TARGET_TYPE, event1.getTargetType());
+        query.filterBy(QueryField.TARGET, event1.getTarget());
+        query.filterBy(QueryField.DATE_FROM, event1.getDate());
+        query.filterBy(QueryField.DATE_TO, event2.getDate());
+        List<StatAction> targetStats = query.getTargetStats();
+        assertNotNull(targetStats);
+        //1 action with target stats:
+        assertEquals(1,targetStats.size());
+        StatAction action = targetStats.get(0);
+        assertEquals(event1.getAction(),action.getName());
+        //Global action count:
+        assertEquals(2,action.getCount());
+        assertNotNull(action.getTargets());
+        //2 months target stats:
+        assertEquals(2,action.getTargets().size());
+        
+        StatCounter firstMonthCounter = action.getTargets().get(0);
+        assertEquals(action.getName(),firstMonthCounter.getName());
+        assertEquals(1,firstMonthCounter.getDateTime().getMonthOfYear());
+        assertEquals(1,firstMonthCounter.getCount());
+
+        StatCounter secondMonthCounter = action.getTargets().get(1);
+        assertEquals(action.getName(),secondMonthCounter.getName());
+        assertEquals(2,secondMonthCounter.getDateTime().getMonthOfYear());
+        assertEquals(1,secondMonthCounter.getCount());
+
+    }
 }

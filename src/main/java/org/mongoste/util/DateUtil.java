@@ -16,11 +16,11 @@
 package org.mongoste.util;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.MutableDateTime;
 
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.TimeZone;
+import java.text.SimpleDateFormat;
 
 /**
  * Various date util methods
@@ -31,36 +31,51 @@ public class DateUtil {
     public static final SimpleDateFormat FORMAT_YY_MM_DD    = new SimpleDateFormat("yyyy-M-dd");
     public static final SimpleDateFormat FORMAT_YY_MM_DD_HH = new SimpleDateFormat("yyyy-M-dd HH");
 
-    /*
-    private final static TimeZone gmtTimeZone = new SimpleTimeZone(0, "GMT");
-    private final static TimeZone utcTimeZone = TimeZone.getTimeZone("UTC");
-    */
-    
-    public static Date getDateGMT0() {
-        return getCalendarGMT0().getTime();
+    /**
+     * Get DateTime with the current system date in UTC time zone
+     * @param trimTime if <code>true</code> then trim time data (zeroing it)
+     * @return DateTime with the current system date in UTC time zone
+     */
+    public static DateTime getDateTimeUTC(boolean trimTime) {
+        DateTime dateTime = getDateTimeUTC();
+        if(trimTime) {
+            dateTime = trimTime(dateTime);
+        }
+        return dateTime;
     }
 
     /**
-     *
-     * @return Calendar with the current system date at GMT 0
+     * Get DateTime with the current system date in UTC time zone
+     * @return DateTime with the current system date in UTC time zone
      */
-    public static Calendar getCalendarGMT0() {
-        Calendar cal = Calendar.getInstance();        
-        TimeZone tz = cal.getTimeZone();
-        cal.add(Calendar.MILLISECOND, -tz.getOffset(cal.getTimeInMillis()));
-        return cal;        
+    public static DateTime getDateTimeUTC() {
+        return new DateTime(DateTimeZone.UTC);
     }
 
-    public static Calendar trimTime(Calendar cal) {
-        cal.set(Calendar.HOUR,0);
-        cal.set(Calendar.HOUR_OF_DAY,0);
-        cal.set(Calendar.MINUTE,0);
-        cal.set(Calendar.SECOND,0);
-        cal.set(Calendar.MILLISECOND,0);
-        return cal;
+    public static DateTime trimTime(DateTime dateTime) {
+        MutableDateTime mdt = dateTime.toMutableDateTime();
+        mdt.setTime(0, 0, 0, 0);
+        return mdt.toDateTime();
     }
 
-    public static DateTime getDateTimeGMT0() {
-        return new DateTime(getCalendarGMT0());
+    public static DateTime toUTC(Date date) {
+        return toUTC(new DateTime(date));
+    }
+
+    public static DateTime toUTC(DateTime fromDate) {
+        if(DateTimeZone.UTC.equals(fromDate.getZone())) {
+            return fromDate;
+        }
+        MutableDateTime dt = getDateTimeUTC().toMutableDateTime();
+        dt.setDateTime(
+            fromDate.getYear(),
+            fromDate.getMonthOfYear(),
+            fromDate.getDayOfMonth(),
+            fromDate.getHourOfDay(),
+            fromDate.getMinuteOfHour(),
+            fromDate.getSecondOfMinute(),
+            fromDate.getMillisOfSecond()
+        );
+        return  dt.toDateTime();
     }
 }

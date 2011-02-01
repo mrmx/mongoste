@@ -45,7 +45,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.TreeMap;
+import org.joda.time.DateTime;
+import org.joda.time.MutableDateTime;
 import org.mongoste.query.Query;
 import org.mongoste.query.QueryField;
 import org.mongoste.query.QueryFilter;
@@ -191,8 +195,8 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         }
         String map = getFunction(FN_MAPPER_TARGETS,mapperScope);
         String red = getFunction(FN_REDUCER_TARGETS);
-        Date now = DateUtil.getDateGMT0();
-        String statsResultCollection = getScopeCollectionName(COLLECTION_STATS,now, scope);
+        DateTime now = DateUtil.getDateTimeUTC();
+        String statsResultCollection = getScopeCollectionName(COLLECTION_STATS,now.toDate(), scope);
         DBObject queryTargets = EMPTY_DOC; //TODO
         try {            
             getTargetCollection().mapReduce(map, red, statsResultCollection, queryTargets);
@@ -302,17 +306,135 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         return getActionCount(queryDoc);
     }
 
-    /*
-    public List<StatCounter> getTargetStats(Query query) throws StatsEngineException {
-        
-        DBObject query = MongoUtil.createDoc(
-            EVENT_CLIENT_ID,clientId,
-            EVENT_TARGET_TYPE,targetType,
-            EVENT_TARGET,new BasicDBObject("$in",targets)
+    public List<StatAction> getTargetStats(Query query) throws StatsEngineException {
+        DBObject queryDoc = MongoUtil.createDoc(
+            EVENT_CLIENT_ID , getQueryValue(query,QueryField.CLIENT_ID),
+            EVENT_TARGET_TYPE,getQueryValue(query,QueryField.TARGET_TYPE),
+            EVENT_TARGET,     getQueryValue(query,QueryField.TARGET)
         );
-        return getActionCount(query);
-    }*/
+        QueryFilter dateFromFilter = query.getFilter(QueryField.DATE_FROM);
+        DateTime dtFrom = null;
+        if(dateFromFilter != null && !dateFromFilter.isEmpty()) {
+            Date date = (Date) dateFromFilter.getValue();
+            dtFrom = new DateTime(date);
+        }
+        QueryFilter dateToFilter = query.getFilter(QueryField.DATE_TO);
+        DateTime dtTo = null;
+        if(dateToFilter != null && !dateToFilter.isEmpty()) {
+            Date date = (Date) dateToFilter.getValue();
+            dtTo = new DateTime(date);
+        }
+        if(dtTo == null) {
+            dtTo = DateUtil.getDateTimeUTC();
+        }
+        if(dtFrom == null) {
+            //Set to date
+            queryDoc.put(EVENT_DATE,new BasicDBObject("$lte", dtTo.toDate()));
+            //queryDoc.put(TARGET_YEAR,new BasicDBObject("$lte", dtTo.getYear()));
+        } else {
+            if(dtTo.isBefore(dtFrom)) {
+                DateTime dt = dtFrom;
+                dtFrom = dtTo;
+                dtTo = dt;
+            }
+            //Set from-to date
+            queryDoc.put(EVENT_DATE,
+                    new BasicDBObject("$gte", dtFrom.toDate()).append("$lte",dtTo.toDate())
+            );
+            /*
+            queryDoc.put(TARGET_YEAR,
+                    new BasicDBObject("$gte", dtFrom.getYear()).append("$lte", dtTo.getYear())
+            );*/
+        }
+        return getTargetStats(queryDoc);
+    }
 
+    private List<StatAction> getTargetStats(DBObject query) throws StatsEngineException {
+        List<StatAction> result = new ArrayList<StatAction>();
+        DBCursor dbc = null;
+        try {
+            log.debug("Querying targets");
+            DBCollection targets = getTargetCollection();
+            long t = System.currentTimeMillis();
+            DBObject fields = MongoUtil.createDoc(
+                    EVENT_ACTION,1,
+                    FIELD_COUNT,1,
+                    TARGET_MONTH,1,
+                    TARGET_YEAR,1
+            );
+            dbc = targets.find(query,fields);
+            t = System.currentTimeMillis() - t;
+            if(t > 1000) {
+                log.warn("getTargetStats query: {} took {}s", query, t / 1000.0);
+            }
+            BasicDBObject resultDoc;
+            Map<String,StatAction> actions = new HashMap<String,StatAction>();
+            Map<String,Map<DateTime,StatCounter>> actionsDate = new HashMap<String,Map<DateTime,StatCounter>>();
+            Map<DateTime,StatCounter> dateCount;
+            StatAction action;
+            StatCounter dateCounter;
+            String actionName;
+            Long count;
+            Integer month,year;
+            MutableDateTime dateTime = DateUtil.getDateTimeUTC(true).toMutableDateTime();
+            DateTime date;
+            int processed = 0;
+            t = System.currentTimeMillis();
+            while(dbc.hasNext()) {
+                resultDoc = (BasicDBObject) dbc.next();
+                actionName = resultDoc.getString(EVENT_ACTION);
+                count = resultDoc.getLong(FIELD_COUNT);
+                month = resultDoc.getInt(TARGET_MONTH);
+                year = resultDoc.getInt(TARGET_YEAR);
+                dateTime.setMonthOfYear(month);
+                dateTime.setYear(year);
+                date = dateTime.toDateTime();
+                action = actions.get(actionName);
+                if(action == null) {
+                    actions.put(actionName,action = new StatAction(actionName,0));
+                }
+                action.add(count);
+                dateCount = actionsDate.get(actionName);
+                if(dateCount == null) {
+                    dateCount = new TreeMap<DateTime,StatCounter>();
+                    actionsDate.put(actionName, dateCount);
+                }
+                dateCounter = dateCount.get(date);
+                if(dateCounter == null) {
+                    dateCount.put(date, dateCounter = new StatCounter(actionName, 0, date.toDate()));
+                }
+                dateCounter.add(count);
+                processed++;
+            }
+            //Build result list
+            for(Entry<String,StatAction> entry : actions.entrySet()) {
+                action = entry.getValue();
+                dateCount = actionsDate.get(action.getName());
+                List<StatCounter> targetList = action.getTargets();
+                for(Entry<DateTime,StatCounter> entryDate : dateCount.entrySet()) {
+                    StatCounter counter = entryDate.getValue();
+                    targetList.add(counter);
+                }
+                result.add(action);
+            }
+            t = System.currentTimeMillis() - t;
+            //TODO add warning level to X ms:
+            if(t > 1000) {
+                log.warn("getTargetStats query fetch: {} took {}s", query, t / 1000.0);
+            } else {
+                log.info("getTargetStats processed {} results in {}ms", processed, t );
+            }
+        }catch(Exception ex) {
+            log.error("getTargetStats",ex);
+            if(ex instanceof StatsEngineException) {
+                throw (StatsEngineException)ex;
+            }
+            throw new StatsEngineException("getTargetStats", ex);
+        } finally {
+            MongoUtil.close(dbc);
+        }
+        return result;
+    }
 
     private Map<String,Long> getActionCount(DBObject query) throws StatsEngineException {
         Map<String,Long> result = new HashMap<String, Long>();
@@ -463,6 +585,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
             q.put(EVENT_TARGET,event.getTarget());
             q.put(EVENT_TARGET_TYPE,event.getTargetType());
             q.put(EVENT_ACTION,event.getAction());
+            q.put(EVENT_DATE,event.getYearMonthDate().toDate());
             q.put(TARGET_YEAR, event.getYear());
             q.put(TARGET_MONTH, event.getMonth());
 
@@ -511,7 +634,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         BasicDBObject doc = new BasicDBObject();
         doc.put("$addToSet", createAddToSetOwnersTagsDoc(event));
         BasicDBObject docSet = new BasicDBObject();
-        docSet.put(createDotPath(actionKey,TOUCH_DATE), DateUtil.getDateGMT0());
+        docSet.put(createDotPath(actionKey,TOUCH_DATE), DateUtil.getDateTimeUTC().toDate());
         doc.put("$set", docSet);
         BasicDBObject incDoc = new BasicDBObject();
         incDoc.put(createDotPath(actionKey,FIELD_COUNT), 1); //Global count
@@ -527,7 +650,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         q.put(EVENT_ACTION,event.getAction());
         BasicDBObject doc = new BasicDBObject();
         BasicDBObject docSet = new BasicDBObject();
-        docSet.put(TOUCH_DATE, DateUtil.getDateGMT0());
+        docSet.put(TOUCH_DATE, DateUtil.getDateTimeUTC().toDate());
         //docSet.put(TARGET_DATE, event.getDate());
         doc.put("$set", docSet);
         BasicDBObject incDoc = new BasicDBObject();
@@ -615,6 +738,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
                     EVENT_TARGET_OWNERS,
                     EVENT_TARGET_TAGS,
                     EVENT_ACTION,
+                    EVENT_DATE,
                     TARGET_YEAR,
                     TARGET_MONTH
                 );
@@ -622,10 +746,23 @@ public class MongoStatsEngine extends AbstractStatsEngine {
                         EVENT_CLIENT_ID,1,
                         EVENT_TARGET,1,
                         EVENT_TARGET_TYPE,1,
+                        TARGET_YEAR,1,
+                        TARGET_MONTH,1
+                        ),"targetYearMonth",true);
+                target.ensureIndex(MongoUtil.createDoc(
+                        EVENT_CLIENT_ID,1,
+                        EVENT_TARGET,1,
+                        EVENT_TARGET_TYPE,1,
                         EVENT_ACTION,1,
                         TARGET_YEAR,1,
                         TARGET_MONTH,1
-                        ),"targetActionDate",true);
+                        ),"targetActionYearMonth",true);
+                target.ensureIndex(MongoUtil.createDoc(
+                        EVENT_CLIENT_ID,1,
+                        EVENT_TARGET,1,
+                        EVENT_TARGET_TYPE,1,
+                        EVENT_DATE,1
+                        ),"targetDate",true);
             }catch(MongoException ex) {
                 throw new StatsEngineException("creating target " + name + " indexes", ex);
             }

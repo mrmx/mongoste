@@ -117,4 +117,11 @@ public interface Query extends Serializable {
      */
     Map<String, Long> getOwnerActionCount() throws StatsEngineException;
 
+    /**
+     * Return target stats per date
+     * @return list of action-> global count and per date stats
+     * @throws StatsEngineException
+     */
+    List<StatAction> getTargetStats() throws StatsEngineException;
+
 }

@@ -108,6 +108,11 @@ public class AbstractStatsEngineTest {
         public void setTargetTags(String clientId, String targetType, String target, List<String> tags) throws StatsEngineException {
             throw new UnsupportedOperationException("Not supported yet.");
         }
+
+        @Override
+        public List<StatAction> getTargetStats(Query query) throws StatsEngineException {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
     }
 
 }

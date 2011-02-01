@@ -188,6 +188,17 @@ public class DefaultQuery implements Query {
         return statsEngine.getOwnerActionCount(this);
     }
 
+    /**
+     * Return target stats per date
+     * @return list of action-> global count and per date stats
+     * @throws StatsEngineException
+     */
+    public List<StatAction> getTargetStats() throws StatsEngineException {
+        assertNotEmpty(CLIENT_ID,TARGET_TYPE,TARGET);
+        log.debug("getTargetStats query {}",this);
+        return statsEngine.getTargetStats(this);
+    }
+
 
     /**
      * Checks if the provided fields has non-empty filters associated

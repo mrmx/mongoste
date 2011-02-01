@@ -15,6 +15,8 @@
  */
 package org.mongoste.model;
 
+import org.joda.time.DateTime;
+
 import java.util.Date;
 
 /**
@@ -24,16 +26,20 @@ import java.util.Date;
 public class StatCounter {
     private String name;
     private long count;
-    private Date date;
+    private DateTime dateTime;
 
     public StatCounter(String name, long count) {
-        this(name,count,null);
+        this(name,count,(DateTime)null);
     }
 
     public StatCounter(String name, long count, Date date) {
+        this(name,count,new DateTime(date));
+    }
+
+    public StatCounter(String name, long count, DateTime dateTime) {
         this.name = name;
         this.count = count;
-        this.date = date;
+        this.dateTime = dateTime;
     }
 
 
@@ -69,15 +75,29 @@ public class StatCounter {
      * @return the date
      */
     public Date getDate() {
-        return date;
+        return dateTime == null ? null : dateTime.toDate();
     }
 
     /**
      * @param date the date to set
      */
     public void setDate(Date date) {
-        this.date = date;
+        setDateTime(new DateTime(date));
     }
+
+    /**
+     * @return the dateTime
+     */
+    public DateTime getDateTime() {
+        return dateTime;
+    }
+
+    /**
+     * @param dateTime the dateTime to set
+     */
+    public void setDateTime(DateTime dateTime) {
+        this.dateTime = dateTime;
+    }    
 
     /**
      * @param count the count to add
