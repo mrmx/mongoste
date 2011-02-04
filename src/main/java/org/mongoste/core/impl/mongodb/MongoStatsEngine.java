@@ -352,8 +352,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
             DBObject fields = MongoUtil.createDoc(
                     EVENT_ACTION,1,
                     FIELD_COUNT,1,
-                    TARGET_MONTH,1,
-                    TARGET_YEAR,1
+                    EVENT_DATE,1
             );
             dbc = targets.find(query,fields);
             t = System.currentTimeMillis() - t;            
@@ -368,19 +367,17 @@ public class MongoStatsEngine extends AbstractStatsEngine {
             StatCounter dateCounter;
             String actionName;
             Long count;
-            Integer month,year;
             MutableDateTime dateTime = DateUtil.getDateTimeUTC(true).toMutableDateTime();
             DateTime date;
+            Date eventYearMonthTargetDate;
             int processed = 0;
             t = System.currentTimeMillis();
             while(dbc.hasNext()) {
                 resultDoc = (BasicDBObject) dbc.next();
                 actionName = resultDoc.getString(EVENT_ACTION);
                 count = resultDoc.getLong(FIELD_COUNT);
-                month = resultDoc.getInt(TARGET_MONTH);
-                year = resultDoc.getInt(TARGET_YEAR);
-                dateTime.setMonthOfYear(month);
-                dateTime.setYear(year);
+                eventYearMonthTargetDate = (Date) resultDoc.get(EVENT_DATE);
+                dateTime.setDate(eventYearMonthTargetDate.getTime());
                 date = dateTime.toDateTime();
                 action = actions.get(actionName);
                 if(action == null) {
