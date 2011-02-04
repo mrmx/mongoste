@@ -84,8 +84,10 @@ public final class MongoUtil {
         return result;
     }
 
-    public static void close(DBCursor dbc) {        
-        dbc.close();
+    public static void close(DBCursor dbc) {
+        if(dbc != null) {
+            dbc.close();
+        }
     }
 
     public static void createIndexes(DBCollection collection, Object ... indexes) {

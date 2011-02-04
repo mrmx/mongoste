@@ -171,8 +171,9 @@ public class DefaultQuery implements Query {
      */
     @Override
     public Map<String,Long> getTargetActionCount() throws StatsEngineException {
-        assertNotEmpty(CLIENT_ID,TARGET_TYPE,TARGET);
-        log.debug("getMultiTargetActionCount query {}",this);
+        assertNotEmpty(CLIENT_ID,TARGET_TYPE);
+        assertAnyNotEmpty(TARGET,TARGET_OWNER);
+        log.debug("getTargetActionCount query {}",this);
         return statsEngine.getTargetActionCount(this);
     }
 
@@ -213,6 +214,25 @@ public class DefaultQuery implements Query {
                 throw new RequiredQueryFieldException(field);
             }
         }
+    }
+
+    /**
+     * Checks if at least one of the provided fields has non-empty filters associated
+     * @param fields Fields to check
+     * @throws RequiredQueryFieldException if provided fields filters are all empty
+     */
+    protected void assertNotEmpty(QueryField ... fields) throws RequiredQueryFieldException {
+        boolean has
+        for(QueryField field : fields) {
+            if() {
+                throw new RequiredQueryFieldException(field);
+            }
+        }
+    }
+
+    private boolean isEmptyFieldFilter(QueryField field) {
+        QueryFilter filter = getFilterByMap().get(field);
+        return filter == null || filter.isEmpty();
     }
 
     /**

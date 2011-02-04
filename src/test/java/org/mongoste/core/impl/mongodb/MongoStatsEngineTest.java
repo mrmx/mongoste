@@ -628,7 +628,9 @@ public class MongoStatsEngineTest {
         assertEquals(event.getYear(),target.get(MongoStatsEngine.TARGET_YEAR));
         DateTime date = new DateTime((Date) target.get(MongoStatsEngine.EVENT_DATE),DateTimeZone.UTC);
         assertNotNull(date);
-        assertEquals(DateUtil.trimTime(event.getDateTime()),date);
+        MutableDateTime eventDate = event.getDateTime().toMutableDateTime();
+        eventDate.setDayOfMonth(1); //Engine sets the event date to first month as targets are per month
+        assertEquals(DateUtil.trimTime(eventDate.toDateTime()),date);
     }
 
     @Test
