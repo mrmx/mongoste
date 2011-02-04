@@ -165,28 +165,16 @@ public class DefaultQuery implements Query {
 
     
     /**
-     * Returns the action counters of given target/s
+     * Returns the action counters of given target/s, target owner/s
      * @return a map of action->count
      * @throws StatsEngineException
      */
     @Override
     public Map<String,Long> getTargetActionCount() throws StatsEngineException {
         assertNotEmpty(CLIENT_ID,TARGET_TYPE);
-        assertAnyNotEmpty(TARGET,TARGET_OWNER);
+        assertNotAllEmpty(TARGET,TARGET_OWNER);
         log.debug("getTargetActionCount query {}",this);
         return statsEngine.getTargetActionCount(this);
-    }
-
-    /**
-     * Returns the action counters of given target owner/s
-     * @return a map of action->count
-     * @throws StatsEngineException
-     */
-    @Override
-    public Map<String,Long> getOwnerActionCount() throws StatsEngineException {
-        assertNotEmpty(CLIENT_ID,TARGET_TYPE,TARGET_OWNER);
-        log.debug("getOwnerActionCount query {}",this);
-        return statsEngine.getOwnerActionCount(this);
     }
 
     /**
@@ -206,11 +194,9 @@ public class DefaultQuery implements Query {
      * @param fields Fields to check
      * @throws RequiredQueryFieldException if field has no filter or filter is empty
      */
-    protected void assertNotEmpty(QueryField ... fields) throws RequiredQueryFieldException {
-        QueryFilter filter;
-        for(QueryField field : fields) {
-            filter = getFilterByMap().get(field);
-            if(filter == null || filter.isEmpty()) {
+    protected void assertNotEmpty(QueryField ... fields) throws RequiredQueryFieldException {        
+        for(QueryField field : fields) {            
+            if(isEmptyFieldFilter(field)) {
                 throw new RequiredQueryFieldException(field);
             }
         }
@@ -221,12 +207,16 @@ public class DefaultQuery implements Query {
      * @param fields Fields to check
      * @throws RequiredQueryFieldException if provided fields filters are all empty
      */
-    protected void assertNotEmpty(QueryField ... fields) throws RequiredQueryFieldException {
-        boolean has
+    protected void assertNotAllEmpty(QueryField ... fields) throws RequiredQueryFieldException {
+        boolean isEmpty = true;
         for(QueryField field : fields) {
-            if() {
-                throw new RequiredQueryFieldException(field);
+            if(!isEmptyFieldFilter(field)) {
+                isEmpty = false;
+                break;
             }
+        }
+        if(isEmpty) {
+            throw new SomeRequiredQueryFieldException(fields);
         }
     }
 

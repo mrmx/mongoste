@@ -104,18 +104,11 @@ public interface Query extends Serializable {
     List<StatCounter> getTopTargets() throws StatsEngineException;
 
     /**
-     * Returns the action counters of given target/s
+     * Returns the action counters of given target/s, target owner/s
      * @return a map of action->count
      * @throws StatsEngineException
      */
     Map<String, Long> getTargetActionCount() throws StatsEngineException;
-
-    /**
-     * Returns the action counters of given target owner/s
-     * @return a map of action->count
-     * @throws StatsEngineException
-     */
-    Map<String, Long> getOwnerActionCount() throws StatsEngineException;
 
     /**
      * Return target stats per date

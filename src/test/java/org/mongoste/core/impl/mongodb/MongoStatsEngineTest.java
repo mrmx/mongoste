@@ -723,11 +723,11 @@ public class MongoStatsEngineTest {
     }
 
     /**
-     * Test of getOwnerActionCount method, of class MongoStatsEngine.
+     * Test of getTargetActionCount method, of class MongoStatsEngine.
      */
     @Test
-    public void testGetOwnerActionCount() throws Exception {
-        System.out.println("getOwnerActionCount");
+    public void getTargetActionCountWithOwnersAndTags() throws Exception {
+        System.out.println("getTargetActionCountWithOwnersAndTags");
         StatEvent event = engine.createSampleEvent();
         engine.handleEvent(event);
         String owner = event.getTargetOwners().get(0);
@@ -736,13 +736,13 @@ public class MongoStatsEngineTest {
         query.filterBy(QueryField.CLIENT_ID, event.getClientId());
         query.filterBy(QueryField.TARGET_TYPE, event.getTargetType());
         query.filterBy(QueryField.TARGET_OWNER, event.getTargetOwners());
-        Map result = query.getOwnerActionCount();
+        Map result = query.getTargetActionCount();
         assertNotNull(result);
         assertEquals(1,result.size());
         
         //No result
         query.filterBy(QueryField.TARGET_OWNER, "unknown-owner");
-        result = query.getOwnerActionCount();
+        result = query.getTargetActionCount();
         assertNotNull(result);
         assertEquals(0,result.size());
         System.out.println("result:"+result);
@@ -750,14 +750,14 @@ public class MongoStatsEngineTest {
         //Search with tags
         query.filterBy(QueryField.TARGET_OWNER, event.getTargetOwners());
         query.filterBy(QueryField.TARGET_TAGS, event.getTargetTags());
-        result = query.getOwnerActionCount();
+        result = query.getTargetActionCount();
         assertNotNull(result);
         assertEquals(1,result.size());
         System.out.println("result:"+result);
         
         //Empty result search with unknown tag
         query.filterBy(QueryField.TARGET_TAGS, "unknown-tag");
-        result = query.getOwnerActionCount();        
+        result = query.getTargetActionCount();
         assertNotNull(result);
         assertEquals(0,result.size());
         System.out.println("result:"+result);

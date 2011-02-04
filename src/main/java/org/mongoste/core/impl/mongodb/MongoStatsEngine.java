@@ -286,19 +286,16 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     public Map<String,Long> getTargetActionCount(Query query) throws StatsEngineException {
         DBObject queryDoc = MongoUtil.createDoc(
             EVENT_CLIENT_ID , getQueryValue(query,QueryField.CLIENT_ID),
-            EVENT_TARGET_TYPE,getQueryValue(query,QueryField.TARGET_TYPE),
-            EVENT_TARGET,     getQueryValue(query,QueryField.TARGET)
+            EVENT_TARGET_TYPE,getQueryValue(query,QueryField.TARGET_TYPE)            
         );
-        return getActionCount(queryDoc);
-    }
-
-    @Override
-    public Map<String,Long> getOwnerActionCount(Query query) throws StatsEngineException {
-        DBObject queryDoc = MongoUtil.createDoc(
-            EVENT_CLIENT_ID , getQueryValue(query,QueryField.CLIENT_ID),
-            EVENT_TARGET_TYPE,getQueryValue(query,QueryField.TARGET_TYPE),
-            EVENT_TARGET_OWNERS,getQueryValue(query,QueryField.TARGET_OWNER)
-        );
+        Object target = getQueryValue(query,QueryField.TARGET);
+        if(target != null){
+            queryDoc.put(EVENT_TARGET, target);
+        }         
+        Object owners = getQueryValue(query,QueryField.TARGET_OWNER);
+        if(owners != null){
+            queryDoc.put(EVENT_TARGET_OWNERS, owners);
+        }
         Object tags = getQueryValue(query,QueryField.TARGET_TAGS);
         if(tags != null){
             queryDoc.put(EVENT_TARGET_TAGS, tags);

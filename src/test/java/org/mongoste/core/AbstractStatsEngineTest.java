@@ -93,12 +93,7 @@ public class AbstractStatsEngineTest {
         public Map<String, Long> getTargetActionCount(Query query) throws StatsEngineException {
             throw new UnsupportedOperationException("Not supported yet.");
         }
-
-        @Override
-        public Map<String, Long> getOwnerActionCount(Query query) throws StatsEngineException {
-            throw new UnsupportedOperationException("Not supported yet.");
-        }
-
+  
         @Override
         public void setTargetOwners(String clientId, String targetType, List<String> targets, List<String> owners) throws StatsEngineException {
             throw new UnsupportedOperationException("Not supported yet.");

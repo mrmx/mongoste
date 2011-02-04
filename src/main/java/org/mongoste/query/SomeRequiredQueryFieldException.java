@@ -16,18 +16,16 @@
 
 package org.mongoste.query;
 
+import java.util.Arrays;
+
 /**
- * Exception for required field
+ * Exception for some required field/s
  * @author mrmx
  */
-public class RequiredQueryFieldException extends QueryException {
+public class SomeRequiredQueryFieldException extends RequiredQueryFieldException {
 
-    public RequiredQueryFieldException(QueryField field) {
-        super(field + " is required");
-    }
-
-    protected RequiredQueryFieldException(String msg) {
-        super(msg);
+    public SomeRequiredQueryFieldException(QueryField ... fields) {
+        super("some of "+Arrays.asList(fields) + " field/s is/are required");
     }
 
 }
