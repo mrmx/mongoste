@@ -16,6 +16,7 @@
 package org.mongoste.core.impl.mongodb;
 
 import org.mongoste.core.AbstractStatsEngine;
+import org.mongoste.core.DuplicateEventException;
 import org.mongoste.core.StatsEngineException;
 import org.mongoste.core.TimeScope;
 import org.mongoste.model.StatEvent;
@@ -30,6 +31,7 @@ import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.Mongo;
 import com.mongodb.MongoException;
+import com.mongodb.WriteConcern;
 import com.mongodb.WriteResult;
 
 import org.apache.commons.io.IOUtils;
@@ -67,7 +69,9 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     private Map<String,DBCollection> collectionMap;
     private Map<String,String> functionMap;
     private static final DBObject EMPTY_DOC = new BasicDBObject();
-
+    private static final int ERROR_DUPKEY 			= 11000;
+    private static final int ERROR_DUPKEY_INSERT	= 11001;
+    
     public static final String DB_NAME              = "dbname";
     protected static final String DEFAULT_DB_NAME     = "mongoste";
     protected static final String EVENT_CLIENT_ID     = "_idc";
@@ -104,6 +108,8 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     protected static final String METAKEY_IP             = "ip";
 
     protected static final TimeScope DEFAULT_TIMESCOPE_PRECISION = TimeScope.DAILY;
+
+	
     
     private boolean resetCollections = false; //For testing debug!!!!
     private boolean countEvents = true;
@@ -172,7 +178,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
                 countTarget(event);
                 //Count total actions/targets
                 countTargetActions(event);
-            } else throw new StatsEngineException("Raw count failed with event "+ event);
+            } 
         }
     }
 
@@ -310,6 +316,10 @@ public class MongoStatsEngine extends AbstractStatsEngine {
             EVENT_TARGET_TYPE,getQueryValue(query,QueryField.TARGET_TYPE),
             EVENT_TARGET,     getQueryValue(query,QueryField.TARGET)
         );
+        QueryFilter actionFilter = query.getFilter(QueryField.ACTION);
+        if(actionFilter != null) {
+        	queryDoc.put(EVENT_ACTION,getQueryValue(query,QueryField.ACTION));
+        }
         QueryFilter dateFromFilter = query.getFilter(QueryField.DATE_FROM);
         DateTime dtFrom = null;
         if(dateFromFilter != null) {            
@@ -338,7 +348,9 @@ public class MongoStatsEngine extends AbstractStatsEngine {
                         new BasicDBObject("$gte", dtFrom.toDate()).append("$lte",dtTo.toDate())
                 );
             }
-        }
+        }        
+        //TODO getTargetStats(queryDoc,query.getPrecision() == TimeScope.DAILY) to handle day level
+        //TODO or better: getTargetStats(queryDoc,query.getPrecision()) to handle hourly,daily,monthly (default) precision
         return getTargetStats(queryDoc);
     }
 
@@ -348,7 +360,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         try {
             log.debug("Querying targets");
             DBCollection targets = getTargetCollection();
-            long t = System.currentTimeMillis();
+            long t = System.currentTimeMillis();            
             DBObject fields = MongoUtil.createDoc(
                     EVENT_ACTION,1,
                     FIELD_COUNT,1,
@@ -568,7 +580,9 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         log.debug("saveEvent result: {}",ws.getLastError());
     }
 
-    private boolean countRawTarget(StatEvent event)  {
+    @SuppressWarnings("finally")
+	private boolean countRawTarget(StatEvent event)  throws StatsEngineException {
+    	boolean processed = false;    	
         try {
             BasicDBObject q = new BasicDBObject();
             q.put(EVENT_CLIENT_ID,event.getClientId());
@@ -605,13 +619,17 @@ public class MongoStatsEngine extends AbstractStatsEngine {
             }
             doc.put("$inc",incDoc);
             DBCollection targets = getTargetCollection(event,TimeScope.GLOBAL);
-            WriteResult ws = targets.update(q,doc,true,true);
-            //log.debug("countRawTarget result: {}",ws.getLastError());
-            return ws.getN() > 0;
-        }catch(Exception ex) {
-            log.error("countRawTarget failed",ex);
-        }
-        return false;
+            //TODO externalize write concern to configuration properties:
+            WriteResult wr = targets.update(q,doc,true,true,WriteConcern.FSYNC_SAFE); 
+            processed = wr.getN() > 0;
+        }catch(MongoException ex) {
+        	int errorCode = ex.getCode();
+        	if(errorCode == ERROR_DUPKEY || errorCode == ERROR_DUPKEY_INSERT) {
+        		throw new DuplicateEventException("Duplicate event " + event);
+        	}    	
+        	throw new StatsEngineException("countRawTarget failed",ex);
+        } 
+        return processed;        
     }
 
     private void countTarget(StatEvent event) throws StatsEngineException {
@@ -738,7 +756,7 @@ public class MongoStatsEngine extends AbstractStatsEngine {
                         EVENT_TARGET_TYPE,1,
                         TARGET_YEAR,1,
                         TARGET_MONTH,1
-                        ),"targetYearMonth",true);
+                        ),"targetYearMonth",false);
                 target.ensureIndex(MongoUtil.createDoc(
                         EVENT_CLIENT_ID,1,
                         EVENT_TARGET,1,
@@ -751,8 +769,15 @@ public class MongoStatsEngine extends AbstractStatsEngine {
                         EVENT_CLIENT_ID,1,
                         EVENT_TARGET,1,
                         EVENT_TARGET_TYPE,1,
+                        EVENT_ACTION,1,
                         EVENT_DATE,1
-                        ),"targetDate",true);
+                        ),"targetActionDate",true);
+                target.ensureIndex(MongoUtil.createDoc(
+                        EVENT_CLIENT_ID,1,
+                        EVENT_TARGET,1,
+                        EVENT_TARGET_TYPE,1,
+                        EVENT_DATE,1
+                        ),"targetDate",false);
             }catch(MongoException ex) {
                 throw new StatsEngineException("creating target " + name + " indexes", ex);
             }

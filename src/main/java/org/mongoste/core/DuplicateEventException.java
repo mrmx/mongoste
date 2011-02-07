@@ -16,24 +16,24 @@
 package org.mongoste.core;
 
 /**
- * Core stats engine exception
+ * Duplicate event stats engine exception
  * @author mrmx
  */
-public class StatsEngineException extends RuntimeException {
+public class DuplicateEventException extends StatsEngineException {
 
-    /**
+	/**
 	 * Serial version
 	 */
-	private static final long serialVersionUID = 3863955288683082759L;
+	private static final long serialVersionUID = -8318719826740661005L;
 
-	public StatsEngineException() {
+	public DuplicateEventException() {
     }
 
-    public StatsEngineException(String msg) {
+    public DuplicateEventException(String msg) {
         super(msg);
     }
 
-    public StatsEngineException(String msg, Throwable cause) {
+    public DuplicateEventException(String msg, Throwable cause) {
         super(msg,cause);
     }
 

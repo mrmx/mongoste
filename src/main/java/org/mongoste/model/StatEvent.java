@@ -17,20 +17,26 @@ package org.mongoste.model;
 
 import org.mongoste.util.DateUtil;
 
-import org.joda.time.DateTime;
-import org.joda.time.MutableDateTime;
-
+import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.joda.time.DateTime;
+import org.joda.time.MutableDateTime;
+
+
 /**
  * Main stat event object
  * @author mrmx
  */
-public class StatEvent {
-    private String clientId;
+public class StatEvent implements Serializable {
+    /**
+	 * Serial version
+	 */
+	private static final long serialVersionUID = 4528657092049273953L;
+	private String clientId;
     private String target;
     private String targetType;
     private List<String> targetOwners;

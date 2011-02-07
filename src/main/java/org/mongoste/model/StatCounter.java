@@ -18,13 +18,19 @@ package org.mongoste.model;
 import org.joda.time.DateTime;
 
 import java.util.Date;
+import java.io.Serializable;
 
 /**
  * A stat counter
  * @author mrmx
  */
-public class StatCounter {
-    private String name;
+public class StatCounter implements Serializable {
+    
+    /**
+	 * Serial version
+	 */
+	private static final long serialVersionUID = -3881894514971648160L;
+	private String name;
     private long count;
     private DateTime dateTime;
 

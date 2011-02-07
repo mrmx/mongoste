@@ -24,7 +24,11 @@ import java.util.List;
  * @author mrmx
  */
 public class StatAction extends StatCounter {
-    private List<StatCounter> targets;
+    /**
+	 * Serial version
+	 */
+	private static final long serialVersionUID = 3382251251144735716L;
+	private List<StatCounter> targets;
 
     public StatAction(String name, long count) {
         this(name,count,null);
