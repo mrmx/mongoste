@@ -144,18 +144,19 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     
     @Override
     public void init(Properties properties) throws StatsEngineException {
+    	log.info("Mongo Stats Engine initialization: {}",properties);
         String host = properties.getProperty("host","localhost");
         int port = -1;
         try {
             port = Integer.parseInt(properties.getProperty("port","-1"));
             mongo = port != -1 ? new Mongo(host, port) : new Mongo(host);
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
             throw new StatsEngineException("Initializing mongo connection",ex);
         }
         String dbName = properties.getProperty(DB_NAME,DEFAULT_DB_NAME);
         try {
             db = mongo.getDB(dbName);
-        }catch(MongoException ex) {
+        }catch(Throwable ex) {
             throw new StatsEngineException("Getting db "+dbName,ex);
         }
         setKeepEvents(Boolean.valueOf(properties.getProperty("events.keep", "true")));

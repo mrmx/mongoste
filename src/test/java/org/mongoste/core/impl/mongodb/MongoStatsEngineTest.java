@@ -102,6 +102,7 @@ public class MongoStatsEngineTest {
     public static void setUpClass() throws Exception {
         Properties props = new Properties();
         props.setProperty(MongoStatsEngine.DB_NAME, "mongoste_tests");
+        props.setProperty("host", "localhost");
         engine = new MongoStatsEngineEx();
         engine.setResetCollections(true);
         engine.init(props);
