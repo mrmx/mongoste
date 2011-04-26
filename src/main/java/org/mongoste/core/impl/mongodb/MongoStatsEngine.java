@@ -575,8 +575,15 @@ public class MongoStatsEngine extends AbstractStatsEngine {
         doc.put(EVENT_TARGET,event.getTarget());
         doc.put(EVENT_TARGET_TYPE,event.getTargetType());
         doc.put(EVENT_ACTION,event.getAction());
-        doc.put(EVENT_DATE,event.getDate());        
-        doc.put(EVENT_METADATA,new BasicDBObject(event.getMetadata()));
+        doc.put(EVENT_DATE,event.getDate());
+        Map<String,Object> metadata = event.getMetadata();
+        if(metadata != null && !metadata.isEmpty()) {
+        	BasicDBObject metadataDoc = new BasicDBObject();
+	        for(String metaKey : metadata.keySet()) {
+	        	metadataDoc.put(replaceKeyDots(metaKey),metaKeyValue(metaKey, metadata.get(metaKey)));
+	        }
+	        doc.put(EVENT_METADATA,metadataDoc);
+        }
         WriteResult ws = events.insert(doc);
         log.debug("saveEvent result: {}",ws.getLastError());
     }
@@ -955,9 +962,9 @@ public class MongoStatsEngine extends AbstractStatsEngine {
     }
 
     private String metaKeyValue(String key, Object value) {
-        String resultKey = String.valueOf(value);
+        String result = String.valueOf(value);
         if(METAKEY_IP.equals(key)) {
-            String [] parts = resultKey.split("\\.");
+            String [] parts = result.split("\\.");
             long ipValue = 0L;
             if(parts.length == 4) {
                 //IPv4?
@@ -977,10 +984,12 @@ public class MongoStatsEngine extends AbstractStatsEngine {
             }
             
         }
-        //Avoid dot notation for json key
-        resultKey = resultKey.replace(".", "_");
-
-        return resultKey;
+        return result;
+    }
+    
+    private String replaceKeyDots(String key) {
+        //Avoid dot notation for json keys
+        return key.replace(".", "_");    	
     }
 
 }
